@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% from "macros.html" import render_inputfield, ucfirst %}
+
+{% block title %}
+{{ ucfirst(token.action.name) }} your account
+{% endblock %}
+
+{% block content %}
+<div class="column is-6 is-offset-3">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if form %}
+		<form method="POST" action="{{ url_for('user.reset_or_activate', token=token.token) }}">
+            {{ form.csrf_token }}
+			{{ render_inputfield(form.password1, 'lock') }}
+			{{ render_inputfield(form.password2, 'lock') }}
+			<button class="button is-block is-info is-large is-fullwidth">{{ ucfirst(token.action.name) }} your account</button>
+		</form>
+    {% endif %}
+	</div>
+</div>
+{% endblock %}
+

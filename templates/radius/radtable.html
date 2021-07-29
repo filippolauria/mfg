@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}
+Manage {% if 'check' in table %}check{% elif 'reply' in table %}reply{% endif %} attributes for
+{% if 'group' in table %}group {{ obj.groupname }}{% else %}user {{ obj.username }}{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{% from "macros.html" import render_inputfield, render_checkbox %}
+
+<div class="column is-12">
+    <h3 class="title">{{ self.title() }}</h3>
+    
+    <div class="box">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if elements %}
+        <table class="table is-fullwidth is-striped">
+            <thead>
+                <tr>    
+                    <th>Attribute</th>
+                    <th><abbr title="Operator">Op</abbr></th>
+                    <th>Value</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            {% for e in elements %}
+                <tr id="element-{{ e.id }}">
+                    <td class="is-vcentered">{{ e.attribute }}</td>
+                    <td class="is-vcentered">{{ e.op }}</td>
+                    <td class="is-vcentered">{{ e.value }}</td>
+                    <td class="is-vcentered">
+                        <div class="buttons">
+                            <button class="button is-light edit-button" data-attrid="{{ e.id }}">
+                                <span class="icon is-small">
+                                    <i class="fas fa-edit"></i>
+                                </span>
+                            </button>
+                            <button class="button is-light" data-attrid="{{ e.id }}">
+                                <span class="icon is-small">
+                                    <i class="fas fa-trash"></i>
+                                </span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No attributes have been found.</p>
+        {% endif %}
+    </div>
+    
+    {% from "macros.html" import render_inputfield %}
+    <h4 class="title is-4">
+        <span id="add-or-edit-label">Add</span> {% if 'check' in table %}check{% elif 'reply' in table %}reply{% endif %} attributes for
+        {% if 'group' in table %}group {{ obj.groupname }}{% else %}user {{ obj.username }}{% endif %}
+    </h4>
+    <div class="box">
+        <form method="POST" action="{{ request.path }}">
+            {{ form.csrf_token }}
+            {{ form.attribute_id }}
+            <div class="columns">
+                <div class="column is-two-fifths">
+                    {{ render_inputfield(form.attribute) }}
+                    <datalist id="{{ form.attribute.render_kw['list'] }}">
+                        {% for attr in attrs %}<option value="{{ attr }}"></option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="column is-one-fifth">{{ render_inputfield(form.op) }}
+                    <datalist id="{{ form.op.render_kw['list'] }}">
+                        {% for op in ops %}<option value="{{ op }}"></option>
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="column is-two-fifths">
+                    {{ render_inputfield(form.value) }}
+                </div>
+            </div>
+            
+            <div class="columns">
+                <div class="column is-11">
+                    <button id="add-or-edit-button" class="button is-block is-info is-fullwidth">Add</button>
+                </div>
+                <div class="column is-1">
+                    <button id="clear-button" class="button is-light is-danger" title="Clear">
+                        <span class="icon is-small">
+                            <i class="fas fa-times"></i>
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    var attr_id_obj = document.getElementById('{{ form.attribute_id.id }}'),
+        attr_obj = document.getElementById('{{ form.attribute.id }}'),
+        op_obj = document.getElementById('{{ form.op.id }}'),
+        value_obj = document.getElementById('{{ form.value.id }}'),
+        addOrEditButton = document.getElementById('add-or-edit-button'),
+        addOrEditLabel = document.getElementById('add-or-edit-label');
+    
+	var editButtons = document.getElementsByClassName('edit-button');
+	for (var i = 0; i < editButtons.length; i++) {
+		editButtons[i].addEventListener('click', function(e){
+            var attr_id = this.getAttribute('data-attrid'),            
+                tr_obj = document.getElementById('element-' + attr_id),
+                td_objs = tr_obj.getElementsByTagName('td');
+            
+            attr_id_obj.value = attr_id;
+            attr_obj.value = td_objs[0].childNodes[0].nodeValue;
+            op_obj.value = td_objs[1].childNodes[0].nodeValue;
+            value_obj.value = td_objs[2].childNodes[0].nodeValue;
+            addOrEditButton.childNodes[0].nodeValue = addOrEditLabel.childNodes[0].nodeValue = "Edit";
+		});
+	}
+    
+    var clearButton = document.getElementById('clear-button');
+    clearButton.addEventListener('click', function(e){
+        attr_id_obj.value = "";
+        attr_obj.value = "";
+        op_obj.value = "";
+        value_obj.value = "";
+        addOrEditButton.childNodes[0].nodeValue = addOrEditLabel.childNodes[0].nodeValue = "Add";
+    });
+});
+</script>
+
+
+{% endblock %}

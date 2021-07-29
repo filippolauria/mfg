@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}{% if form %}First installation{% else %}Welcome{% endif %}{% endblock %}
+
+{% block content %}
+
+{% if not form %}
+<div class="hero-body">
+    <div class="container has-text-centered">
+        <h1 class="title">{{ conf.get('application.name') }}</h1>
+    </div>
+</div>
+{% else %}
+
+<section class="hero is-info">
+    <div class="hero-body">
+        <p class="title">{{ self.title() }}</p>
+        <p class="subtitle">
+            You are going to create a new organization and a new administrator account.
+        </p>
+    </div>
+</section>
+
+<div class="column is-10 is-offset-1">
+    <div class="box">
+        
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% from "macros.html" import render_inputfield, render_checkbox %}
+        <form method="POST" action="{{ url_for('main.index') }}">
+            {{ form.csrf_token }}
+
+            <h5 class="title is-5">Organization details</h5>
+            <div class="field">
+                <div class="field-body">
+                    {{ render_inputfield(form.shortname) }}
+                    {{ render_inputfield(form.fullname) }}
+                </div>
+            </div>
+            
+            
+            <h5 class="title is-5">Administrator details</h5>
+            <div class="field">
+                <div class="field-body">
+                    {{ render_inputfield(form.email, 'envelope-open-text') }}
+                    {{ render_inputfield(form.username, 'user') }}
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-body">
+                    {{ render_inputfield(form.firstname) }}
+                    {{ render_inputfield(form.lastname) }}
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-body">
+                    {{ render_inputfield(form.password1, 'lock') }}
+                    {{ render_inputfield(form.password2, 'lock') }}
+                </div>
+            </div>
+            <button class="button is-block is-info is-fullwidth">Create</button>
+        </form>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

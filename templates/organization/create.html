@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Create an organization{% endblock %}
+
+{% block content %}
+<div class="column is-10 is-offset-1">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% from "macros.html" import render_inputfield %}
+        <form method="POST" action="{{ url_for('organization.create') }}">
+            {{ form.csrf_token }}
+            {{ render_inputfield(form.shortname) }}
+			{{ render_inputfield(form.fullname) }}
+            <button class="button is-block is-info is-fullwidth">Create</button>
+        </form>
+    </div>
+</div>
+
+{% include 'organization/shortlist.html' %}
+
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Search user by username{% endblock %}
+
+{% block content %}
+
+{% from "macros.html" import render_inputfield, render_checkbox %}
+
+<div class="column is-12">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="card">
+        <header class="card-header">
+            <p class="card-header-title">Search filters</p>
+            <button class="card-header-icon card-toggle" aria-label="more options">
+                <span class="icon">
+                    <i class="fas fa-angle-down" aria-hidden="true"></i>
+                </span>
+            </button>
+        </header>
+        <div class="card-content{% if users %} is-hidden{% endif %}">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('user.search') }}">
+                {{ form.csrf_token }}
+                {{ render_inputfield(form.username, 'search') }}
+                
+                <button class="button is-block is-info is-fullwidth">Search</button>
+            </form>
+        </div>
+    </div>
+    
+    {% if request.method == 'POST' %}
+    <div class="box">
+        
+        {% if users %}
+        <table class="table is-fullwidth is-striped is-size-7">
+            <thead>
+                <tr>    
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Organization</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            {% for u in users %}
+                <tr>
+                    <td class="is-vcentered">{{ u.fullname() }}</td>
+                    <td class="is-vcentered">{{ u.username }}</td>
+                    <td class="is-vcentered">{% if u.organization %}{{ u.organization.shortname }}{% else %}-{% endif %}</td>
+                    <td class="is-vcentered">{% if u.is_disabled() %}
+                            The account is disabled<br>
+                        {% else %}
+                            {% if u.disable_on %}Autodisables on {{ u.disable_on }}{% else %}Account does not autodisable{% endif %}<br>
+                        {% endif %}
+                        {% if u.is_expired() %}
+                            The password has expired
+                        {% else %}
+                            {% if u.expires_on %}
+                                Password expires on {{ u.expires_on }}<br>Password is {% if not u.self_renew %}not {% endif %}self-renewable
+                            {% else %}
+                                Password does not expire
+                            {% endif %}
+                        {% endif %}
+                        </td>
+                    <td class="is-vcentered">
+                        <div class="buttons">
+                            <a class="button is-light" href="{{ url_for('contact_person.associate_organizations', uid=u.id) }}" title="Contact person details">
+                                <span class="icon is-small">
+                                    <i class="fas fa-address-card{% if u.is_contact_person() %} has-text-success-dark{% else %} has-text-danger-dark{% endif %}"></i>
+                                </span>
+                            </a>
+                            <a class="button is-light" href="{{ url_for('user.details', uid=u.id) }}" title="User details">
+                                <span class="icon is-small">
+                                    <i class="fas fa-info"></i>
+                                </span>
+                            </a>
+                            <button class="button is-light" onclick="set_and_submit({{ u.id }})" title="Delete this user">
+                                <span class="icon is-small">
+                                    <i class="fas fa-trash"></i>
+                                </span>
+                            </button>
+                            
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p>Selected filters did not produce any result.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% if form %}
+<form style="display: none;" id="delete-form" method="POST" action="{{ url_for('user.delete') }}">
+    {{ form.csrf_token }}
+    {{ form.uid }}
+</form>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	var cardToggles = document.getElementsByClassName('card-toggle');
+	for (var i = 0; i < cardToggles.length; i++) {
+		cardToggles[i].addEventListener('click', function(e){
+            var card = e.currentTarget.parentElement.parentElement;
+            card.getElementsByClassName('card-content')[0].classList.toggle('is-hidden');
+		});
+	}
+});
+</script>
+
+{% endblock %}

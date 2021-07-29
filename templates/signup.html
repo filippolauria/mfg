@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Signup{% endblock %}
+
+{% block content %}
+
+{% if not form %}
+<section class="hero is-info">
+    <div class="hero-body">
+        <p class="title">{{ self.title() }}</p>
+        <p class="subtitle">
+            The auto signup feature is disabled.
+        </p>
+    </div>
+</section>
+{% else %}
+
+<div class="column is-6 is-offset-3">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% from "macros.html" import render_inputfield, render_checkbox %}
+		<form method="POST" action="{{ url_for('auth.signup') }}">
+            {{ form.csrf_token }}
+			{{ render_inputfield(form.email, 'envelope') }}
+			
+            <button class="button is-block is-info is-fullwidth">Singup</button>
+            
+		</form>
+	</div>
+</div>
+
+{% endif %}
+
+
+{% endblock %}

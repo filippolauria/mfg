@@ -1,0 +1,53 @@
+    <nav class="navbar is-white">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item brand-text" href="{{ url_for('main.index') }}">{{ conf.get('application.name') }}</a>
+                <div class="navbar-burger burger" data-target="navMenu">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+            
+            <div id="navMenu" class="navbar-menu">
+                {% if current_user.is_authenticated and current_user.is_admin_or_contact_person() %}
+                {% from "macros.html" import render_nav_field %}
+                <div class="navbar-start">
+                    {{ render_nav_field("Dashboard", url_for('main.dashboard')) }}
+                    {{ render_nav_field("Users", url_for('user.list')) }}
+                    {{ render_nav_field("Contact Persons", url_for('contact_person.list')) }}
+                    {% if current_user.is_admin %}
+                        {{ render_nav_field("Organizations", url_for('organization.list')) }}
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if request.path != url_for('auth.login') %}
+                <div class="navbar-end">
+                    <div class="navbar-item">
+                        <div class="buttons">
+                            {% if current_user.is_authenticated %}
+                                {% if current_user.is_admin_or_contact_person() %}
+                                    {% if request.path != url_for('auth.login') %}
+                                    <a href="#" class="button is-info is-light">
+                                        <strong>Switch to user view</strong>
+                                    </a>
+                                    {% endif %}
+                                {% endif %}
+                            
+                            <a href="{{ url_for('auth.logout') }}" class="button is-danger is-light">
+                                <strong>Log out</strong>
+                            </a>
+                            {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="button is-success is-light">
+                                <strong>Log in</strong>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+            </div>
+        </div>
+    </nav>

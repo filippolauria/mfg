@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Create an user{% endblock %}
+
+{% block content %}
+<div class="column is-10 is-offset-1">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% from "macros.html" import render_inputfield, render_checkbox %}
+
+        <form method="POST" action="{{ url_for('user.create') }}">
+            {{ form.csrf_token }}
+            
+            {{ render_inputfield(form.email, 'envelope-open-text') }}
+            
+            <div class="field">
+                <div class="field-body">
+                    {{ render_inputfield(form.firstname) }}
+                    {{ render_inputfield(form.lastname) }}
+                </div>
+            </div>
+            
+            <div class="field">
+                <label class="label" for="{{ form.organization.id }}">{{ form.organization.label.text }}</label>
+                <div class="select is-fullwidth">
+                    {{ form.organization }}
+                </div>
+            </div>
+            
+            <hr class="is-divider">
+            
+            {{ render_inputfield(form.username, 'user') }}
+            
+            <div class="field">
+                <label class="label" for="{{ form.registration_method.id }}">{{ form.registration_method.label.text }}</label>
+                <div class="select is-fullwidth">
+                    {{ form.registration_method }}
+                </div>
+            </div>
+            
+            <div class="field">
+                <div class="field-body">
+                    {{ render_inputfield(form.password1, 'lock') }}
+                    {{ render_inputfield(form.password2, 'lock') }}
+                </div>
+            </div>
+            
+            <hr class="is-divider">
+            
+            {{ render_inputfield(form.expires_in) }}
+            {{ render_checkbox(form.self_renew) }}
+            
+            {{ render_inputfield(form.disable_on) }}
+            {{ render_checkbox(form.auto_disable) }}
+            
+            <button class="button is-block is-info is-fullwidth">Create</button>
+        </form>
+    </div>
+</div>
+
+<script>
+var registration_method_obj = document.getElementById("registration_method");
+var password1_obj = document.getElementById("password1");
+var password2_obj = document.getElementById("password2");
+registration_method_obj.addEventListener("change", function() {
+    var link_via_mail = (registration_method_obj.value === 'link_via_mail');
+    password1_obj.required = !link_via_mail;
+    password2_obj.required = !link_via_mail;
+    password1_obj.disabled = link_via_mail;
+    password2_obj.disabled = link_via_mail;
+});
+
+
+var auto_disable_obj = document.getElementById("auto_disable");
+var disable_on_obj = document.getElementById("disable_on");
+auto_disable_obj.addEventListener("change", function() {
+    var auto_disable = auto_disable_obj.checked;
+    disable_on_obj.required = auto_disable;
+    disable_on_obj.disabled = !auto_disable;
+
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    registration_method_obj.value = 'password_by_admin';
+    password1_obj.required = true;
+    password2_obj.required = true;
+    password1_obj.disabled = false;
+    password2_obj.disabled = false;
+    
+    auto_disable_obj.checked = false;
+    disable_on_obj.required = false;
+    disable_on_obj.disabled = true;
+}, false);
+
+</script>
+
+{% endblock %}

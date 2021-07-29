@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Contact persons list{% endblock %}
+
+{% block content %}
+
+<div class="column is-12">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+        
+        {% if contact_persons %}
+        <table class="table is-fullwidth is-striped is-size-7">
+            <thead>
+                <tr>    
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Organization</th>
+                    <th>Contact person for</th>
+                    {% if current_user.is_admin %}<th>Actions</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+            
+            {% for cp in contact_persons %}
+                <tr>
+                    <td>{{ cp.fullname() }}</td>
+                    <td>{{ cp.username }}</td>
+                    <td>{{ cp.organization.shortname }}</td>
+                    <td>
+                        {% for o in cp.organizations %}
+                            {{ o.name() }}<br>
+                        {% endfor %}
+                    </td>
+                    
+                    {% if current_user.is_admin %}
+                    <td>
+                        <a class="mx-2" href="{{ url_for('contact_person.associate_organizations', uid=cp.id) }}" title="Contact person details">
+                            <i class="fas fa-address-card"></i>
+                        </a>
+                    </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>There are no contact persons.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+{% endblock %}

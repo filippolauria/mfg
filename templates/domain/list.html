@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Domain names list{% endblock %}
+
+{% block content %}
+
+<div class="column is-10 is-offset-1">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% if domains %}
+        <table class="table is-fullwidth is-striped">
+            <thead>
+                <tr>
+                    <th>Domain name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            {% for domain in domains %}
+                <tr>
+                    <td class="is-vcentered">{{ domain.domain_name }}</td>
+                    <td class="is-vcentered">
+                        <div class="buttons">
+                            <a class="button is-light" href="{{ url_for('domain.edit', uid=domain.id) }}" title="Edit this domain name">
+                                <span class="icon is-small">
+                                    <i class="fas fa-edit"></i>
+                                </span>
+                            </a>
+                            <button class="button is-light" onclick="set_and_submit({{ domain.id }})" title="Delete this domain name">
+                                <span class="icon is-small">
+                                    <i class="fas fa-trash"></i>
+                                </span>
+                            </button>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No domain names have been found. Create one from <a href="{{ url_for('domain.create') }}">here</a>.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+<form style="display: none;" id="delete-form" method="POST" action="{{ url_for('domain.delete') }}">
+    {{ form.csrf_token }}
+    {{ form.uid }}
+</form>
+
+{% endblock %}

@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}User details{% endblock %}
+
+{% block content %}
+<div class="column is-12">
+    <h3 class="title">{{ self.title() }}</h3>
+
+    <div class="tile is-ancestor has-text-centered">
+        <div class="tile is-parent">
+            <article class="tile is-child box">
+                <p class="title">Username</p>
+                <p class="subtitle">{{ user.username }}</p>
+            </article>
+        </div>
+        <div class="tile is-parent">
+            <article class="tile is-child box">
+                <p class="title">Email</p>
+                <p class="subtitle">{{ user.email }}</p>
+            </article>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="box">
+            {% for category, message in messages %}
+            <div class="notification is-{{ category }}" role="alert">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+    
+    <h4 class="title is-4">Other details</h4>
+    <div class="box">
+        <div class="dropdown is-right is-pulled-right">
+            <div class="dropdown-trigger">
+                <button id="dropdown-button" class="button" aria-haspopup="true" aria-controls="dropdown-menu">
+                    <span class="icon is-small">
+                        <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                    </span>
+                </button>
+            </div>
+            <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                <div class="dropdown-content" style="min-width:200px">
+                    
+                {% if current_user.id != user.id %}
+                    {% if current_user.is_admin_or_contact_person() %}
+                        <a href="#" class="button is-white dropdown-item">
+                            <span class="icon-text">
+                                <span class="icon"><i class="fas fa-edit"></i></span>
+                                <span>Edit details</span>
+                            </span>
+                        </a>
+                    {% endif %}
+                    {% if not user.is_admin %}
+                        <a href="{{ url_for('contact_person.associate_organizations', uid=user.id) }}" class="button is-white dropdown-item">
+                            <span class="icon-text">
+                                <span class="icon"><i class="fas fa-user-shield"></i></span>
+                                <span>{% if user.is_contact_person() %}Manage contact person{% else %}Promote to contact person{% endif %}</span>
+                            </span>
+                        </a>
+                    {% endif %}
+                    <button id="toggle-admin" class="button is-danger is-light dropdown-item" data-uid="{{ user.id }}">
+                        <span class="icon">
+                            <i class="fas fa-user-cog"></i>
+                        </span>
+                        <span>{% if user.is_admin %}Remove administrator privileges{% else %}Give administrator privileges{% endif %}</span>
+                    </button>
+                    <hr class="dropdown-divider">
+                {% endif %}
+                    <a href="{{ url_for('radius.radcheck', uid=user.id) }}" class="button is-white dropdown-item">
+                        <div class="icon-text">
+                            <div class="icon"><i class="fas fa-tasks"></i></div>
+                            <div>Check attributes</div>
+                        </div>
+                    </a>
+                    <a href="{{ url_for('radius.radreply', uid=user.id) }}" class="button is-white dropdown-item">
+                        <div class="icon-text">
+                            <div class="icon"><i class="fas fa-tasks"></i></div>
+                            <div>Reply attributes</div>
+                        </div>
+                    </a>
+                    <hr class="dropdown-divider">
+                {% if current_user.id != user.id %}
+                    <button class="button is-white dropdown-item" data-uid="{{ user.id }}">
+                        <span class="icon">
+                            <i class="fas fa-key"></i>
+                        </span>
+                        <span>Reset password (generate token)</span>
+                    </button>
+                    <a class="button is-white dropdown-item">
+                        <span class="icon-text">
+                            <span class="icon"><i class="fas fa-user-lock"></i></span>
+                            <span>Change password (admin)</span>
+                        </span>
+                    </a>
+                {% endif %}
+                    <a class="button is-white dropdown-item">
+                        <div class="icon-text">
+                            <div class="icon"><i class="fas fa-lock"></i></div>
+                            <div>Change password</div>
+                        </div>
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+        
+        
+
+        <h6 class="title is-6 mb-3">Personal information</h6>
+        <ul>
+            <li><strong>Name</strong>: {{ user.fullname() }}</li>
+            <li><strong>Organization</strong>: {% if user.organization %}{{ user.organization.name() }}{% else %} - {% endif %}</li>
+            
+            {% if user.is_admin_or_contact_person() %}
+            <li><strong>Role</strong>:
+                {% if user.is_admin %}{{ user.fullname() }} is a system <strong>administrator</strong>
+                {% else %}{{ user.fullname() }} is a <strong>contact person</strong> for:
+                    {% for o in user.organizations %}
+                        <strong>{{ o.shortname }}</strong>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </li>
+            {% endif %}
+        </ul>
+
+        <hr class="my-3">
+        
+        <h6 class="title is-6 mb-3">Account information</h6>
+        <ul>
+            <li>This account has been created on <strong>{{ user.created_on.strftime('%b %d, %Y') }}</strong> {% if user.creator %} by <strong>{{ user.creator.fullname() }}</strong>{% endif %}</li>
+            <li>{% if user.is_disabled() %}
+            The account is disabled
+        {% else %}
+            {% if user.disable_on %}The account will be automatically disabled on <strong>{{ user.disable_on.strftime('%b %d, %Y') }}</strong>
+            {% else %}The account will <strong>not</strong> be automatically disabled{% endif %}
+        {% endif %}</li>
+        
+        <li>
+        {% if user.is_expired() %}
+            The password has expired {% if user.expires_on %}on <strong>{{ user.expires_on.strftime('%b %d, %Y') }}</strong>{% endif %}
+        {% else %}
+            {% if user.expires_on %}
+                The password expires on <strong>{{ user.expires_on.strftime('%b %d, %Y') }}</strong> and can{% if not user.self_renew %}not{% endif %} be self-renewed
+            {% else %}
+                Password does <strong>not</strong> expire
+            {% endif %}
+        {% endif %}</li>
+        </ul>
+    </div>
+</div>
+
+{% if form %}
+<form style="display: none;" id="toggle-admin-form" method="POST" action="{{ url_for('user.toggle_admin') }}">
+    {{ form.csrf_token }}
+    {{ form.uid }}
+</form>
+{% endif %}
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    {% if current_user.id != user.id %}
+    var form_obj = document.getElementById('toggle-admin-form');
+    var uid_obj = document.getElementById('uid');
+    
+	var adminToggler = document.getElementById('toggle-admin');
+    adminToggler.addEventListener('click', function(e){
+        uid_obj.value = this.getAttribute('data-uid');
+        var should_toggle = confirm('Are you sure?');
+        if (should_toggle) {
+            form_obj.submit();
+        }
+    });
+    {% endif %}
+    
+    var button = document.getElementById('dropdown-button'),
+        dropdown = document.getElementsByClassName('dropdown');
+
+    button.addEventListener('click', function(e){
+        dropdown[0].classList.toggle('is-active');
+    });
+});
+
+</script>
+
+{% endblock %}

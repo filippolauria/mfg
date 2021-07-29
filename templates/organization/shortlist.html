@@ -1,0 +1,22 @@
+<div class="column is-10 is-offset-1">
+    <h5 class="title">Organizations summary</h5>
+    <div class="box">
+        <table class="table is-fullwidth is-striped">
+            <thead>
+                <tr>
+                    <th>Short Name</th>
+                    <th>Full Name</th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            {% for o in organizations %}
+                <tr>
+                    <td>{{ o.shortname }}</td>
+                    <td>{{ o.fullname }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

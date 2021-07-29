@@ -1,0 +1,20 @@
+<div class="column is-10 is-offset-1">
+    <h5 class="title">Domain names summary</h5>
+    <div class="box">
+        <table class="table is-fullwidth is-striped">
+            <thead>
+                <tr>
+                    <th>Domain name</th>
+                </tr>
+            </thead>
+            <tbody>
+            
+            {% for d in domains %}
+                <tr>
+                    <td>{{ d.domain_name }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

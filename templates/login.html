@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="column is-6 is-offset-3">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+
+    {% with messages = get_flashed_messages() %}
+		{% if messages %}
+			<div class="notification is-danger">
+				{{ messages[0] }}
+			</div>
+		{% endif %}
+	{% endwith %}
+
+    {% from "macros.html" import render_inputfield, render_checkbox %}
+		<form method="POST" action="{{ url_for('auth.login') }}">
+            {{ form.csrf_token }}
+			{{ render_inputfield(form.username, 'user') }}
+			{{ render_inputfield(form.password, 'lock') }}
+			{{ render_checkbox(form.remember) }}
+
+            <button class="button is-block is-info is-fullwidth">Login</button>
+            
+            <div class="level options">
+                <div class="level-left"></div>
+                <div class="level-right">
+                    <a class="btn btn-link" href="{{ url_for('user.forgot_password_username') }}">Forgot Password?</a>
+                </div>
+            </div>
+
+		</form>
+	</div>
+</div>
+{% endblock %}

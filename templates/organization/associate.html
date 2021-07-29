@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Associate domain names{% endblock %}
+
+{% block content %}
+
+<div class="column is-10 is-offset-1">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <p>You are associating domain names to {{ organization.fullname }} ({{ organization.shortname }})</p>
+        <form method="POST" action="{{ request.path }}">
+            {{ form.csrf_token }}
+            <div class="field">
+                <label class="label">{{ form.field.label.text }}</label>
+                <div class="select is-multiple is-fullwidth">
+                    {{ form.field }}
+                </div>
+            </div>
+            <button class="button is-block is-info is-fullwidth">Associate</button>
+        </form>
+    </div>
+    
+    <h4 class="title is-4">Associated domains summary</h4>
+    <div class="box">
+    {% if organization.domains %}
+        
+    <p>Here you have a list of all the domains associated with {{ organization.shortname }}:</p>
+    <table class="table is-fullwidth is-striped">
+        <thead>
+            <tr>
+                <th>Domain name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in organization.domains %}
+            <tr><td>{{ d.domain_name }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No domains associated to this organization.</p>
+    {% endif %}
+    
+    </div>
+</div>
+
+
+{% endblock %}

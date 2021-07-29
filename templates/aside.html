@@ -1,0 +1,60 @@
+{% from "macros.html" import render_aside_field %}
+
+<aside class="menu is-hidden-mobile">
+    <p class="menu-label">Users</p>
+    <ul class="menu-list">
+        <li>
+            <ul>
+                {{ render_aside_field('Create an user', url_for('user.create')) }}
+                {{ render_aside_field('Manage users', url_for('user.list')) }}
+                {{ render_aside_field('Search by username', url_for('user.search')) }}
+            </ul>
+        </li>
+    </ul>
+    
+    <p class="menu-label">Groups</p>
+    <ul class="menu-list">
+        <li>
+            <ul>{{ render_aside_field('Manage groups', url_for('group.manage')) }}</ul>
+        </li>
+    </ul>
+    
+    <p class="menu-label">Organizations</p>
+    <ul class="menu-list">
+        <li>
+            <ul>
+                {{ render_aside_field('Create an organization', url_for('organization.create')) }}
+                {{ render_aside_field('Manage organizations', url_for('organization.list')) }}
+            </ul>
+        </li>
+    </ul>
+    
+    <p class="menu-label">Contact Persons</p>
+    <ul class="menu-list">
+        <li>
+            <ul>
+                {{ render_aside_field('Manage contact persons', url_for('contact_person.list')) }}
+            </ul>
+        </li>
+    </ul>
+    
+    <p class="menu-label">Domain names</p>
+    <ul class="menu-list">
+        <li>
+            <ul>
+                {{ render_aside_field('Create a domain name', url_for('domain.create')) }}
+                {{ render_aside_field('Manage domain names', url_for('domain.list')) }}
+            </ul>
+        </li>
+    </ul>
+    
+    <p class="menu-label">General</p>
+    <ul class="menu-list">
+        <li>
+            <ul>
+                <li><a>Global settings</a></li>
+                <li><a>Events log</a></li>
+            </ul>
+        </li>
+    </ul>
+</aside>

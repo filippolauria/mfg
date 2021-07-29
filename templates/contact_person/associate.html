@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Associate organizations{% endblock %}
+
+{% block content %}
+
+<div class="column is-10 is-offset-1">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <p class="block">
+            {% if user.is_admin %}
+                Since <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) is already an administrator of this application they can be considered as a contact person for all the registered organizations.
+            {% else %}
+                You are going to make <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) a contact person for the selected organizations.
+            {% endif %}
+        </p>
+        
+        {% if not user.is_admin %}
+        <form method="POST" action="{{ request.path }}">
+            {{ form.csrf_token }}
+            <div class="field">
+                <label class="label">{{ form.field.label.text }}</label>
+                <div class="select is-multiple is-fullwidth">
+                    {{ form.field }}
+                </div>
+            </div>
+            <button class="button is-block is-info is-fullwidth">Associate</button>
+        </form>
+        {% endif %}
+    </div>
+    
+    {% if not user.is_admin %}
+    <h4 class="title is-4">Associate organizations summary</h4>
+    <div class="box">
+    {% if user.organizations %}
+        
+    <p class="has-text-justified">
+        Here you have a list of all the organizations for which <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) is a contact person:
+    </p>
+    <table class="table is-fullwidth is-striped">
+        <thead>
+            <tr>
+                <th>Short name</th>
+                <th>Full name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in user.organizations %}
+            <tr>
+                <td>{{ o.shortname }}</td>
+                <td>{{ o.fullname }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p><strong>{{ user.fullname() }}</strong> is not a contact person.</p>
+    {% endif %}
+    
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
