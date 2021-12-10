@@ -2,7 +2,7 @@
 Minimal FreeRADIUS GUI (MFG) is a web application written in Python 3 on top of [Flask](https://flask.palletsprojects.com/en/2.0.x/), [SQLAlchemy](https://www.sqlalchemy.org/) and [WTForms](https://wtforms.readthedocs.io/en/2.3.x/), which aims at managing an instance of [FreeRADIUS](https://freeradius.org/) (Version 3.x) with MySQL support ([installation guide](https://wiki.freeradius.org/guide/SQL-HOWTO-for-freeradius-3.x-on-Debian-Ubuntu)).
 
 ## development environment
-This section describes the steps to quickly setup a development environment on an Ubuntu instance.
+This section describes the steps to quickly setup a development environment on a Debian 11 instance (equipped w/ [sudo](https://wiki.debian.org/sudo/)).
 It is supposed that you have already installed FreeRADIUS and configured it with MySQL support as described [here](https://wiki.freeradius.org/guide/SQL-HOWTO-for-freeradius-3.x-on-Debian-Ubuntu).
 ### 0. create a development directory
 Let's create our development directory:
@@ -19,7 +19,7 @@ Let's install python3 [venv](https://docs.python.org/3/library/venv.html) and ac
     source env/bin/activate
 
 ### 2. clone git repository and install dependencies
-    sudo apt install libmysqlclient-dev
+    sudo apt install git python3-dev build-essential default-libmysqlclient-dev
     git clone https://github.com/filippolauria/mfg.git
     cd mfg
     pip3 install -r requirements.txt
