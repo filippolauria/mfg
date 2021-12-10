@@ -167,7 +167,16 @@ t_contactperson_organization = db.Table(table_prefix + 'contactperson_organizati
                                         db.Column('user_id', db.Integer,
                                                   db.ForeignKey(table_prefix + 'user.id'), nullable=False),
                                         db.Column('organization_id', db.Integer,
-                                                  db.ForeignKey(table_prefix + 'organization.id'), nullable=False))
+                                                  db.ForeignKey(table_prefix + 'organization.id'), nullable=False),
+                                        extend_existing=True)
+
+
+t_organization_group = db.Table(table_prefix + 'organization_group',
+                                 db.Column('organization_id', db.Integer,
+                                           db.ForeignKey(table_prefix + 'organization.id'), nullable=False),
+                                 db.Column('group_id', db.Integer,
+                                           db.ForeignKey(table_prefix + 'group.id'), nullable=False),
+                                 extend_existing=True)
 
 
 class Organization(db.Model):
@@ -178,6 +187,7 @@ class Organization(db.Model):
     fullname = db.Column(db.String(253, 'utf8_bin'), nullable=False)
     users = db.relationship('User', back_populates="organization")
 
+    groups = db.relationship('Group', secondary=t_organization_group, back_populates='organizations')
     domains = db.relationship('Domain', secondary=t_organization_domain, back_populates='organizations')
     contact_persons = db.relationship('User', secondary=t_contactperson_organization, back_populates='organizations')
     settings = db.relationship('OrganizationSettings', back_populates="organization")
@@ -276,6 +286,8 @@ class Group(db.Model):
     radgroupcheck_attributes = db.relationship('Radgroupcheck', back_populates='group')
     radgroupreply_attributes = db.relationship('Radgroupreply', back_populates='group')
     users = db.relationship('User', back_populates='groups', secondary=t_radusergroup)
+
+    organizations = db.relationship('Organization', secondary=t_organization_group, back_populates='groups')
 
     creator_id = db.Column(db.Integer, db.ForeignKey(table_prefix + 'user.id'), nullable=True)
     creator = db.relationship('User')

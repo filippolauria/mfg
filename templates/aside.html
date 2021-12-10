@@ -12,6 +12,7 @@
         </li>
     </ul>
     
+    {% if current_user.is_authenticated and current_user.is_admin %}
     <p class="menu-label">Groups</p>
     <ul class="menu-list">
         <li>
@@ -57,4 +58,5 @@
             </ul>
         </li>
     </ul>
+    {% endif %}
 </aside>

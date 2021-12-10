@@ -30,6 +30,7 @@ from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from mfg import db
+from mfg.config import account_disabled_groupname, password_expired_groupname
 from mfg.forms import GroupForm, UidForm
 from mfg.models import Group
 
@@ -92,7 +93,7 @@ def manage():
                            uidform=uidform)
 
 
-@group.route('/admin/group/delete')
+@group.route('/admin/group/delete', methods=['POST'])
 @is_admin
 def delete():
     """
@@ -111,6 +112,11 @@ def delete():
         # we get the gid and cast it to integer
         gid = int(form.uid.data)
         this_group = db.session.query(Group).get(gid)
+        
+        # we cannot remove user deleted and user disabled group
+        if this_group.groupname in [ account_disabled_groupname, password_expired_groupname ]:
+            flash("The selected group cannot be removed", "danger")
+            return redirect(url_for('group.manage'))
 
         # we ensure that the group associated with the submitted gid is valid
         if not this_group:
