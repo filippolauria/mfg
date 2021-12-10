@@ -29,8 +29,8 @@ from flask_wtf import FlaskForm
 from wtforms import IntegerField, BooleanField, PasswordField, StringField, HiddenField, SelectMultipleField, \
                     DateField, SelectField
 from wtforms.validators import Length, Regexp, EqualTo, Email, InputRequired
-from wtforms.widgets.html5 import EmailInput
-from wtforms.ext.sqlalchemy.orm import model_form
+from wtforms.widgets import EmailInput
+from wtforms_sqlalchemy.orm import model_form
 
 from mfg import db
 from mfg.models import Organization, Domain

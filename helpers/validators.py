@@ -25,7 +25,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from wtforms.validators import ValidationError, Required, Length
+from wtforms.validators import ValidationError, InputRequired, Length
 
 from mfg import db
 from mfg.models import User
@@ -44,7 +44,7 @@ class EmailAlreadyUsed(object):
             raise ValidationError(f"{field.data} is already used by {user_obj.username}")
 
 
-class IfChecked(Required):
+class IfChecked(InputRequired):
     def __init__(self, checkbox_field_name, required=True, *args, **kwargs):
         self.required = required
         self.checkbox_field_name = checkbox_field_name
@@ -66,13 +66,13 @@ class RequiredIfChecked(IfChecked):
         super(RequiredIfChecked, self).__init__(checkbox_field_name, required=True, *args, **kwargs)
 
 
-class MinMaxLengthAndEqualIfRequired(Length, Required):
+class MinMaxLengthAndEqualIfRequired(Length, InputRequired):
     def __init__(self, min, max, other_field_name, other_field_value, equalto_field_name=None, *args, **kwargs):
         self.other_field_name = other_field_name
         self.other_field_value = other_field_value
         self.equalto_field_name = equalto_field_name
 
-        Required.__init__(self, *args, **kwargs)
+        InputRequired.__init__(self, *args, **kwargs)
         Length.__init__(self, min=min, max=max)
 
     def __call__(self, form, field):
@@ -85,10 +85,10 @@ class MinMaxLengthAndEqualIfRequired(Length, Required):
                     raise ValidationError(f"this should match {equalto_field.label.text}")
 
             Length.__call__(self, form, field)
-            Required.__call__(self, form, field)
+            InputRequired.__call__(self, form, field)
 
 
-class RequiredIf(Required):
+class RequiredIf(InputRequired):
     def __init__(self, other_field_name, other_field_value, *args, **kwargs):
         self.other_field_name = other_field_name
         self.other_field_value = other_field_value

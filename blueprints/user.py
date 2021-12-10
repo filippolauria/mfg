@@ -30,7 +30,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy_utils.functions import escape_like
-from wtforms.widgets.html5 import NumberInput
+from wtforms.widgets import NumberInput
 from wtforms.validators import NumberRange
 
 from mfg import db
