@@ -437,7 +437,7 @@ def reset_or_activate(token):
                                 continue
 
                     # we also check that the default password attribute has been set
-                    hash_type = ConfigManager.get('hasing.algorithm')
+                    hash_type = ConfigManager.get('hashing.algorithm')
                     default_password_set = Radcheck.query.filter(Radcheck.attribute == hash_type).first()
 
                     message = f"Password for {user_obj.username} has been successfully reset"
@@ -445,7 +445,7 @@ def reset_or_activate(token):
                 # if we don't have set the default password type or the action is activate
                 if not default_password_set or this_token.action == ActionEnum.activate:
                     # we create a new hash
-                    hash_type = ConfigManager.get('hasing.algorithm')
+                    hash_type = ConfigManager.get('hashing.algorithm')
                     hash_ = make_hash(form.password1.data, hash_type)
 
                     # and add a new attr
@@ -546,7 +546,7 @@ def create():
 
             # chose according to registration method
             if form.registration_method.data == 'password_by_admin':
-                hash_type = ConfigManager.get('hasing.algorithm')
+                hash_type = ConfigManager.get('hashing.algorithm')
                 hash_ = make_hash(form.password1.data, hash_type)
                 radcheck_record = Radcheck(username=username, attribute=hash_type, op=':=', value=hash_)
                 db.session.add(radcheck_record)

@@ -112,7 +112,7 @@ def signup_finalization(token):
             # we start creating firstname, lastname and hash
             firstname = form.firstname.data.title()
             lastname = form.lastname.data.title()
-            hash_type = ConfigManager.get('hasing.algorithm')
+            hash_type = ConfigManager.get('hashing.algorithm')
             hash_value = make_hash(form.password1.data, hash_type)
 
             # then we create the username starting from firstname and lastname

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% from "macros.html" import render_inputfield, render_checkbox %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<section class="hero is-info welcome is-small">
+    <div class="hero-body">
+        <div class="container">
+            <h1 class="title">
+                Hello, {{ current_user.firstname }}.
+            </h1>
+            <h2 class="subtitle">
+                I hope you are having a great day!
+            </h2>
+        </div>
+    </div>
+</section>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="box">
+    <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="box">
+
+
+    <table class="table is-fullwidth is-striped is-size-7">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Organization</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="is-vcentered">{{ current_user.fullname() }}<br>
+                </td>
+                <td class="is-vcentered">{{ current_user.username }}</td>
+                <td class="is-vcentered">{% if current_user.organization %}{{ current_user.organization.shortname
+                    }}{%
+                    else %}-{% endif %}
+                </td>
+                <td class="is-vcentered">{% if current_user.is_disabled() %}
+                    The account is disabled<br>
+                    {% else %}
+                    {% if current_user.disable_on %}Autodisables on {{ current_user.disable_on }}{% else %}Account
+                    does
+                    not autodisable{%
+                    endif %}<br>
+                    {% endif %}
+                    {% if current_user.is_expired() %}
+                    The password has expired
+                    {% else %}
+                    {% if current_user.expires_on %}
+                    Password expires on {{ current_user.expires_on }}<br>Password is {% if not
+                    current_user.self_renew
+                    %}not {% endif
+                    %}self-renewable
+                    {% else %}
+                    Password does not expire
+                    {% endif %}
+                    {% endif %}
+                </td>
+                <td class="is-vcentered">
+                    <div class="buttons">
+                        <a class="button is-light" href="{{ url_for('user.details', uid=current_user.id) }}"
+                            title="User details">
+                            <span class="icon is-small">
+                                <i class="fas fa-info"></i>
+                            </span>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="box">
+    <form method="POST" action="{{ url_for('main.dashboard') }}">
+        {{ form.csrf_token }}
+        <div class="field">
+            <div class="field-body">
+                {{ render_inputfield(form.password1, 'lock') }}
+                {{ render_inputfield(form.password2, 'lock') }}
+            </div>
+
+        </div>
+
+        <button class="button is-block is-info is-fullwidth">Change Password</button>
+    </form>
+</div>
+
+<div class="box">
+    <form method="POST" action="{{ url_for('main.dashboard') }}">
+        {{ form.csrf_token }}
+        <div class="field">
+            <div class="field-body">
+                {{ render_inputfield(formName.firstname) }}
+                {{ render_inputfield(formName.lastname) }}
+            </div>
+        </div>
+        <button class="button is-block is-info is-fullwidth">Change Name</button>
+    </form>
+</div>
+
+<script>
+
+    var password1_obj = document.getElementById("password1");
+    var password2_obj = document.getElementById("password2");
+    document.addEventListener('DOMContentLoaded', function () {
+
+        password1_obj.required = true;
+        password2_obj.required = true;
+        password1_obj.disabled = false;
+        password2_obj.disabled = false;
+
+        auto_disable_obj.checked = false;
+        disable_on_obj.required = false;
+        disable_on_obj.disabled = true;
+    }, false);
+
+</script>
+
+{% endblock %}

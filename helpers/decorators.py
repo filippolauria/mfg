@@ -59,6 +59,20 @@ def is_admin_or_contact_person(func):
 
     return decorated_function
 
+def is_regular_user(func):
+    """
+    decorator that aborts with the HTTP 403 status code, if the current_user is an admin or a contact person
+    """
+
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if current_user.is_authenticated and not current_user.is_admin and not current_user.is_contact_person():
+            return func(*args, **kwargs)
+
+        abort(403)
+
+    return decorated_function
+
 
 def is_authenticated(func):
     """
