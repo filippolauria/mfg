@@ -25,20 +25,22 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from flask import Blueprint, request, redirect, render_template, flash, url_for
 from flask_login import current_user, logout_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from mfg import db
 from mfg.config import account_disabled_groupname, password_expired_groupname
-from mfg.forms import SearchByUsernameForm, FirstAccessForm
-from mfg.models import User, Organization, Group, Radcheck, Radgroupcheck
+from mfg.forms import UidForm, SearchByUsernameForm, FirstAccessForm, PasswordForm, UserPersonInfoForm
+from mfg.models import User, Organization, Group, Radcheck, Radgroupcheck, Token, ActionEnum
 
 from mfg.helpers.config import ConfigManager, OrganizationConfigManager
-from mfg.helpers.decorators import is_admin_or_contact_person
+from mfg.helpers.decorators import is_admin_or_contact_person , is_regular_user
 from mfg.helpers.hashes import make_hash
-from mfg.helpers.utils import flash_errors
+from mfg.helpers.utils import flash_errors, make_token
+from mfg.helpers.validators import MinMaxLengthAndEqualIfRequired
+
 
 
 main = Blueprint('main', __name__)
@@ -92,7 +94,7 @@ def index():
 
                 # we create the attribute for the password
                 # ConfigManager.get returns the default since here this property has not been set yet in the db
-                hash_type = ConfigManager.get('hasing.algorithm')
+                hash_type = ConfigManager.get('hashing.algorithm')
                 hash_ = make_hash(form.password1.data, hash_type)
                 radcheck_record = Radcheck(username=username, attribute=hash_type, op=':=', value=hash_)
                 db.session.add(radcheck_record)
@@ -132,52 +134,118 @@ def index():
     return render_template('index.html', conf=ConfigManager, form=form)
 
 
-@main.route('/dashboard')
-@is_admin_or_contact_person
+@main.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
-    """
-    dashboard view. This view shows application stats to admin(s) or contact person(s)
-    """
+        if current_user.is_admin_or_contact_person():
+            """
+            dashboard view. This view shows application stats to admin(s) or contact person(s)
+            """
 
-    # we instantiate the form used for searching user by username
-    form = SearchByUsernameForm()
+            # we instantiate the form used for searching user by username
+            form = SearchByUsernameForm()
 
-    # we get a list of organization IDs which can be managed
-    # by the current admin (all the organizations) or
-    # by the current contact person
-    org_ids = [x.id for x in current_user.managed_organizations()]
+            # we get a list of organization IDs which can be managed
+            # by the current admin (all the organizations) or
+            # by the current contact person
+            org_ids = [x.id for x in current_user.managed_organizations()]
 
-    # we get the list of all the user belonging to the selected organizations
-    users = User.query.filter(User.organization_id.in_(org_ids)).all()
+            # we get the list of all the user belonging to the selected organizations
+            users = User.query.filter(User.organization_id.in_(org_ids)).all()
 
-    # we start count how many users are...
-    counters = {}
+            # we start count how many users are...
+            counters = {}
 
-    # expired...
-    counters['expired'] = User.query.with_entities(User.id).join(User.groups).filter(
-                              (Group.groupname == password_expired_groupname) &
-                              (User.organization_id.in_(org_ids))).distinct().count()
-    # disabled...
-    counters['disabled'] = User.query.with_entities(User.id).join(User.groups).filter(
-                               (Group.groupname == account_disabled_groupname) &
-                               (User.organization_id.in_(org_ids))).distinct().count()
+            # expired...
+            counters['expired'] = User.query.with_entities(User.id).join(User.groups).filter(
+                                    (Group.groupname == password_expired_groupname) &
+                                    (User.organization_id.in_(org_ids))).distinct().count()
+            # disabled...
+            counters['disabled'] = User.query.with_entities(User.id).join(User.groups).filter(
+                                    (Group.groupname == account_disabled_groupname) &
+                                    (User.organization_id.in_(org_ids))).distinct().count()
 
-    # we get the number of days before the account expiration.
-    # During this time the account is considered as "expiring"
-    expires_in_days = ConfigManager.get('alert.when.password.expires.in.days')
+            # we get the number of days before the account expiration.
+            # During this time the account is considered as "expiring"
+            expires_in_days = ConfigManager.get('alert.when.password.expires.in.days')
 
-    expires_on = date.today() + timedelta(days=expires_in_days)
-    counters['expiring'] = User.query.with_entities(User.id).filter(
-                               (User.expires_on <= expires_on) &
-                               (User.organization_id.in_(org_ids))).distinct().count()
+            expires_on = date.today() + timedelta(days=expires_in_days)
+            counters['expiring'] = User.query.with_entities(User.id).filter(
+                                    (User.expires_on <= expires_on) &
+                                    (User.organization_id.in_(org_ids))).distinct().count()
 
-    # we count how many organizations we have
-    counters['organization'] = Organization.query.with_entities(Organization.id).count()
+            # we count how many organizations we have
+            counters['organization'] = Organization.query.with_entities(Organization.id).count()
 
-    # we count how many contact persons we have
-    counters['contact_person'] = User.query.with_entities(User.id).filter(
-                                     User.organizations.any(
-                                         Organization.id.in_(org_ids))).distinct().count()
+            # we count how many contact persons we have
+            counters['contact_person'] = User.query.with_entities(User.id).filter(
+                                            User.organizations.any(
+                                                Organization.id.in_(org_ids))).distinct().count()
 
-    return render_template('dashboard.html', conf=ConfigManager, current_user=current_user, users=users, form=form,
-                           counters=counters)
+            return render_template('dashboard.html', conf=ConfigManager, current_user=current_user, users=users, form=form,
+                                counters=counters)
+
+        elif current_user.is_regular_user():
+                """
+                This view allows the current regular user to see his information.
+                """
+                form = PasswordForm(request.form)
+
+                formName = UserPersonInfoForm(request.form)
+               
+
+                #after changing password
+                if request.method == 'POST':
+                    
+                    if (not form.validate() and form.password1.data and form.password2.data):
+                        flash_errors(form)
+                        #TODO
+                    
+                    
+                    elif form.password1.data and form.password2.data:
+
+                        try:
+
+                            form.password1.validators = [MinMaxLengthAndEqualIfRequired(4, 64, 'registration_method', 'password_by_admin', equalto_field_name='password2')]
+                            form.password2.validators = [MinMaxLengthAndEqualIfRequired(4, 64, 'registration_method', 'password_by_admin')]
+                            
+                            hash_type = ConfigManager.get('hashing.algorithm')
+                            hash_ = make_hash(form.password1.data, hash_type)
+                            radcheck_record = db.session.query(Radcheck).filter(( Radcheck.username == current_user.username) & (Radcheck.attribute == hash_type)).first()
+                            radcheck_record.value = hash_ 
+                            
+                            db.session.commit()
+                            
+                            flash(f"Password successfully changed!",'success')
+                        
+                        except SQLAlchemyError as e:
+                            flash(str(e), 'danger')
+                        
+                       
+                        formName.firstname.data = current_user.firstname
+                        formName.lastname.data = current_user.lastname
+
+                        return render_template('dashboardRU.html', conf=ConfigManager, current_user=current_user, form=form, formName=formName)
+                    
+                    elif formName.firstname.data and formName.lastname.data:
+                        #replace names
+                        try:
+                            
+                            user = db.session.query(User).filter(( User.username == current_user.username) & (User.lastname == current_user.lastname)).first()
+                            
+                            user.firstname = formName.firstname.data
+                            user.lastname = formName.lastname.data
+                            
+                            db.session.commit()
+                            
+                            flash(f"Name successfully changed!",'success')
+                        
+                        except SQLAlchemyError as e:
+                            flash(str(e), 'danger')
+
+                        return render_template('dashboardRU.html', conf=ConfigManager, current_user=current_user, form=form, formName=formName)
+                       
+
+                formName.firstname.data = current_user.firstname
+                formName.lastname.data = current_user.lastname
+                
+                return render_template('dashboardRU.html',conf=ConfigManager, current_user=current_user, form=form, formName=formName)

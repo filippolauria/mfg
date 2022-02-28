@@ -256,6 +256,9 @@ class User(db.Model):
     def is_admin_or_contact_person(self):
         return bool(self.managed_organizations())
 
+    def is_regular_user(self):
+        return not bool(self.managed_organizations())
+
     def is_authenticated(self):
         return True
 

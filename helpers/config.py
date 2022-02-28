@@ -37,7 +37,7 @@ default_global_settings = {
     "max.signup.token.expired.after.hours": {"value": "12", "coerce": int},
     "max.items.per.page": {"value": "50", "coerce": int},
     "alert.when.password.expires.in.days": {"value": "10", "coerce": int},
-    "hasing.algorithm": {"value": "MD5-Password", "coerce": str},
+    "hashing.algorithm": {"value": "MD5-Password", "coerce": str},
     "application.name": {"value": "Minimal FreeRADIUS GUI", "coerce": str},
     "application.shortname": {"value": "MFG", "coerce": str},
     "smtp.hostname": {"value": "", "coerce": str},
