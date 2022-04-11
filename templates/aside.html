@@ -1,6 +1,13 @@
 {% from "macros.html" import render_aside_field %}
 
+{% if current_user.is_authenticated %}
 <aside class="menu is-hidden-mobile">
+
+    
+
+    {% if request.path.startswith("/admin") %}
+        {% if current_user.is_admin_or_contact_person() %}
+    
     <p class="menu-label">Users</p>
     <ul class="menu-list">
         <li>
@@ -11,8 +18,10 @@
             </ul>
         </li>
     </ul>
-    
-    {% if current_user.is_authenticated and current_user.is_admin %}
+        
+        {% endif %}
+        
+        {% if current_user.is_admin %}
     <p class="menu-label">Groups</p>
     <ul class="menu-list">
         <li>
@@ -58,5 +67,19 @@
             </ul>
         </li>
     </ul>
+        {% endif %}
+    {% elif request.path.startswith("/user") %}
+    
+    <p class="menu-label">User</p>
+    <ul class="menu-list">
+        <li>
+            <ul>
+                {{ render_aside_field('Details', url_for('user.user_details')) }}
+                {{ render_aside_field('Change Password', url_for('user.change_password')) }}
+            </ul>
+        </li>
+    </ul>
     {% endif %}
+
 </aside>
+{% endif %}

@@ -2,7 +2,7 @@
 #
 #  helpers/decorators.py
 #
-# Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
+# Copyright 2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
@@ -25,37 +25,45 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import abort
+from flask import abort, redirect, url_for
 from flask_login import current_user
 from functools import wraps
 
 
 def is_admin(func):
     """
-    decorator that aborts with the HTTP 403 status code, if the current_user is not an admin
+    decorator that redirects to the login page, if the current user is not authenticated,
+    or aborts with the HTTP 403 status code, if the current_user is not an admin
     """
 
     @wraps(func)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated and current_user.is_admin:
-            return func(*args, **kwargs)
+        if current_user.is_authenticated:
+            if current_user.is_admin:
+                return func(*args, **kwargs)
 
-        abort(403)
+            return abort(403)
+
+        return redirect(url_for('auth.login'))
 
     return decorated_function
 
 
 def is_admin_or_contact_person(func):
     """
-    decorator that aborts with the HTTP 403 status code, if the current_user is not an admin or a contact person
+    decorator that redirects to the login page, if the current user is not authenticated,
+    or aborts with the HTTP 403 status code, if the current_user is not an admin or a contact person
     """
 
     @wraps(func)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated and (current_user.is_admin or current_user.is_contact_person()):
-            return func(*args, **kwargs)
+        if current_user.is_authenticated:
+            if current_user.is_admin or current_user.is_contact_person():
+                return func(*args, **kwargs)
 
-        abort(403)
+            return abort(403)
+        
+        return redirect(url_for('auth.login'))
 
     return decorated_function
 
@@ -66,23 +74,26 @@ def is_regular_user(func):
 
     @wraps(func)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated and not current_user.is_admin and not current_user.is_contact_person():
-            return func(*args, **kwargs)
+        if current_user.is_authenticated:
+            if not (current_user.is_admin or current_user.is_contact_person()):
+                return func(*args, **kwargs)
 
-        abort(403)
+            return abort(403)
+
+        return redirect(url_for('auth.login'))
 
     return decorated_function
 
 
 def is_authenticated(func):
     """
-    decorator that aborts with the HTTP 403 status code, if the current_user is not authenticated
+    decorator that redirects to the login page, if the current_user is not authenticated
     """
     @wraps(func)
     def decorated_function(*args, **kwargs):
         if current_user.is_authenticated:
             return func(*args, **kwargs)
 
-        abort(403)
+        return redirect(url_for('auth.login'))
 
     return decorated_function

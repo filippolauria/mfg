@@ -297,7 +297,8 @@ def login():
 
         # if the above check passes, then we know the user has the right credentials
         login_user(user, remember=form.remember.data)
-        return redirect(url_for('main.dashboard'))
+        redirect_url = url_for(('main.privileged_dashboard' if user.is_admin_or_contact_person() else 'main.regular_dashboard'))
+        return redirect(redirect_url)
 
     # get method
     return render_template('login.html', conf=ConfigManager, form=form)

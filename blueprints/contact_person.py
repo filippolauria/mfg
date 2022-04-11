@@ -41,7 +41,7 @@ from mfg.helpers.utils import flash_errors
 contact_person = Blueprint('contact_person', __name__)
 
 
-@contact_person.route('/contact_person/list')
+@contact_person.route('/admin/contact_person/list')
 @is_admin_or_contact_person
 def list():
     """
@@ -108,7 +108,7 @@ def associate_organizations(uid):
                 elif len(selected_obj) == 1:
                     flash("The organization has been associated successfully", 'success')
                 else:
-                    flash("The domain names have been associated successfully", 'success')
+                    flash("The organizations have been associated successfully", 'success')
             except SQLAlchemyError as e:
                 # TODO replace the exception text with a custom error message
                 # TODO log the exception (to db ?, to file ?)

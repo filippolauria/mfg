@@ -120,7 +120,7 @@ def radtable_helper(obj_id, RadiusModelClass, MfgModelClass, foreign_key_attr_na
 
 # ~ def delete_from_radtabled(RadiusModelClass, foreign_key_attr_name)
 
-@radius.route('/radius/radcheck/manage/<int:uid>', methods=['GET', 'POST'])
+@radius.route('/admin/radius/radcheck/manage/<int:uid>', methods=['GET', 'POST'])
 @is_admin
 def radcheck(uid):
     """
@@ -129,7 +129,7 @@ def radcheck(uid):
     return radtable_helper(uid, Radcheck, User, 'username')
 
 
-@radius.route('/radius/radreply/manage/<int:uid>', methods=['GET', 'POST'])
+@radius.route('/admin/radius/radreply/manage/<int:uid>', methods=['GET', 'POST'])
 @is_admin
 def radreply(uid):
     """
@@ -138,7 +138,7 @@ def radreply(uid):
     return radtable_helper(uid, Radreply, User, 'username')
 
 
-@radius.route('/radius/radgroupcheck/manage/<int:gid>', methods=['GET', 'POST'])
+@radius.route('/admin/radius/radgroupcheck/manage/<int:gid>', methods=['GET', 'POST'])
 @is_admin
 def radgroupcheck(gid):
     """
@@ -147,7 +147,7 @@ def radgroupcheck(gid):
     return radtable_helper(gid, Radgroupcheck, Group, 'groupname')
 
 
-@radius.route('/radius/radgroupreply/manage/<int:gid>', methods=['GET', 'POST'])
+@radius.route('/admin/radius/radgroupreply/manage/<int:gid>', methods=['GET', 'POST'])
 @is_admin
 def radgroupreply(gid):
     """

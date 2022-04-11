@@ -31,12 +31,12 @@ from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy_utils.functions import escape_like
 from wtforms.widgets import NumberInput
-from wtforms.validators import NumberRange
+from wtforms.validators import EqualTo, InputRequired, NumberRange
 
 from mfg import db
 from mfg.config import account_disabled_groupname, password_expired_groupname
 from mfg.forms import UidForm, UserForm, PasswordForm, RecoverWithEmailForm, RecoverWithUsernameForm, \
-                          SearchFiltersForm, SearchByUsernameForm
+                          SearchFiltersForm, SearchByUsernameForm, ChangePasswordForm
 from mfg.models import Organization, ActionEnum, Token, User, Group, Radcheck, Radreply, Radacct, Radpostauth
 
 from mfg.helpers.config import ConfigManager, OrganizationConfigManager
@@ -50,7 +50,7 @@ from mfg.helpers.widgets import DateInput
 user = Blueprint('user', __name__)
 
 
-@user.route('/user/search', methods=['GET', 'POST'])
+@user.route('/admin/user/search', methods=['GET', 'POST'])
 @is_admin_or_contact_person
 def search():
     """
@@ -84,8 +84,8 @@ def search():
                            user_datalist=user_datalist)
 
 
-@user.route('/user/list/<int:pagenum>', methods=['GET', 'POST'])
-@user.route('/user/list', methods=['GET', 'POST'])
+@user.route('/admin/user/list/<int:pagenum>', methods=['GET', 'POST'])
+@user.route('/admin/user/list', methods=['GET', 'POST'])
 @is_admin_or_contact_person
 def list(pagenum=1):
     """
@@ -196,7 +196,7 @@ def list(pagenum=1):
                            uid_form=uid_form, search_form=search_form)
 
 
-@user.route('/user/toggle_admin', methods=['POST'])
+@user.route('/admin/user/toggle_admin_status', methods=['POST'])
 @is_admin
 def toggle_admin():
     """
@@ -254,7 +254,7 @@ def toggle_admin():
     return redirect(url_for('user.list'))
 
 
-@user.route('/user/delete', methods=['POST'])
+@user.route('/admin/user/delete', methods=['POST'])
 @is_admin_or_contact_person
 def delete():
     """
@@ -474,7 +474,7 @@ def reset_or_activate(token):
                            token=this_token)
 
 
-@user.route('/user/create', methods=['GET', 'POST'])
+@user.route('/admin/user/create', methods=['GET', 'POST'])
 @is_admin_or_contact_person
 def create():
     """
@@ -568,40 +568,82 @@ def create():
     return render_template('user/create.html', conf=ConfigManager, current_user=current_user, form=form)
 
 
-@user.route('/user/details/<int:uid>', methods=['GET'])
+@user.route('/user/password', methods=['GET', 'POST'])
 @is_authenticated
+def change_password():
+    """
+    this view is used by authenticated users to update their password
+    """
+
+    # instantiate the form
+    form = ChangePasswordForm()
+    form.password1.flags.required = True
+    form.password2.flags.required = True
+    form.current_password.flags.required = True
+    form.password1.validators.append(InputRequired())
+    form.password2.validators.append(InputRequired())
+    
+    if request.method == 'POST':
+        if not form.validate():
+            flash_errors(form)
+            return render_template('user/change_password.html', conf=ConfigManager, current_user=current_user, form=form)
+
+        hash_type = ConfigManager.get('hashing.algorithm')
+        # get the (first) password attribute
+        radcheck_record = db.session.query(Radcheck).filter((Radcheck.username == current_user.username) &
+                                                            (Radcheck.attribute == hash_type)).first()
+
+        # check if the provided current password is valid
+        old_password_valid = check_password_hash(form.current_password.data, radcheck_record.value, hash_type)
+        if not old_password_valid:
+            flash("The specified current password is not valid.", 'danger')
+            
+        else:
+            radcheck_record.value = make_hash(form.password1.data, hash_type)
+            db.session.commit()
+            flash("Password successfully changed!", 'success')
+    
+    for field in form:
+        field.data = ""
+    
+    return render_template('user/change_password.html', conf=ConfigManager, current_user=current_user, form=form)
+
+
+@user.route('/user/details', methods=['GET'])
+@is_authenticated
+def user_details():
+    """
+    this view is used by authenticated users to show their user details
+    """
+
+    return render_template('user/details.html', conf=ConfigManager, current_user=current_user, user=current_user)
+
+
+@user.route('/admin/user/details/<int:uid>', methods=['GET'])
+@is_admin_or_contact_person
 def details(uid):
     """
-    this view is used by an authenticated user to show user details
+    this view is used by an admin or a contact person to show user details
     """
 
     # retrieve the user object associated to the provided uid
     this_user = db.session.query(User).get(uid)
 
-    if current_user.is_admin_or_contact_person():
-        # we get a list of organization IDs which can be managed
-        # by the current admin (all the organizations) or
-        # by the current contact person
-        org_ids = [x.id for x in current_user.managed_organizations()]
+    if not this_user:
+        # TODO log
+        abort(404)
 
-        if not this_user:
-            # TODO log
-            abort(404)
+    # we get a list of organization IDs which can be managed
+    # by the current admin (all the organizations) or
+    # by the current contact person
+    org_ids = [x.id for x in current_user.managed_organizations()]
 
-        if this_user.organization_id not in org_ids:
-            # TODO log
-            abort(403)
+    if this_user.organization_id not in org_ids:
+        # TODO log
+        abort(403)
 
-        # we instantiate an UidForm
-        form = UidForm()
-
-    else:
-        # a simple user can access only to their details
-        if not this_user or uid != current_user.id:
-            # TODO log
-            abort(403)
-
-        form = None
+    # we instantiate an UidForm
+    form = UidForm()
 
     return render_template('user/details.html', conf=ConfigManager, current_user=current_user, user=this_user,
                            form=form)

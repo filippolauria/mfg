@@ -31,6 +31,10 @@
 {% endmacro %}
 
 
+{% macro render_nav_button(label, endpoint, class="info") %}
+    <a class="button is-{{ class }} is-light" href="{{ endpoint }}"><strong>{{ label }}</strong></a>
+{% endmacro %}
+
 {% macro render_nav_field(label, endpoint) %}
     <a class="navbar-item{% if request.path == endpoint %} is-active{% endif %}" href="{{ endpoint }}">{{ label }}</a>
 {% endmacro %}

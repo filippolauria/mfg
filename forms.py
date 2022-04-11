@@ -94,6 +94,10 @@ class PasswordForm(FlaskForm):
                               render_kw={'class': 'input', 'placeholder': 'Repeat Password'})
 
 
+class ChangePasswordForm(PasswordForm):
+    current_password = PasswordField('Current Password', [InputRequired(), Length(min=4, max=64)],
+                                     render_kw={'class': 'input', 'placeholder': 'Current Password'})
+
 class UserPersonInfoForm(FlaskForm):
     firstname = StringField('First Name', [Length(min=4, max=64), InputRequired()],
                             render_kw={'class': 'input', 'placeholder': 'First Name'})
