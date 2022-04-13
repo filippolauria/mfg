@@ -217,7 +217,7 @@ def regular_dashboard():
                 
                 db.session.commit()
                 
-                flash(f"Password successfully changed!",'success')
+                flash("Password successfully changed!",'success')
             
             except SQLAlchemyError as e:
                 flash(str(e), 'danger')

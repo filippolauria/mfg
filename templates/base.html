@@ -18,7 +18,7 @@
     <div class="container">
         <div class="columns">
             
-            {% if current_user.is_authenticated %}
+            {% if current_user.is_authenticated and request.path != url_for('main.index') %}
             <div class="column is-3 ">
                 {% include "aside.html" %}
             </div>
