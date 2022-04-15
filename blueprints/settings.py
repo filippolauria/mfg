@@ -25,42 +25,48 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import Blueprint, render_template, redirect, url_for, request, abort, flash
-from flask_wtf import FlaskForm
+from flask import Blueprint, render_template, request, flash
 from flask_login import current_user
-from mfg.helpers.config import ConfigManager, default_global_settings as dgs
-from mfg.helpers.decorators import is_admin, is_admin_or_contact_person
+from flask_wtf import FlaskForm
+
 from mfg import db
-from sqlalchemy.exc import SQLAlchemyError
 from mfg.models import GlobalSettings
+from sqlalchemy.exc import SQLAlchemyError
 from wtforms import IntegerField, StringField
 
+from mfg.helpers.config import ConfigManager, default_global_settings as dgs
+from mfg.helpers.decorators import is_admin
+from mfg.helpers.utils import flash_errors
+
+
 settings = Blueprint('settings', __name__)
+
+
 @settings.route('/admin/settings', methods=['GET', 'POST'])
 @is_admin
 def admin():
     # we retrieve all the settings from the database
     global_settings = db.session.query(GlobalSettings).all()
-    
+
     # temporary form class for create a variable number of fields
     class F(FlaskForm):
         pass
 
     for s in global_settings:
         field_type = dgs[s.keyword]['coerce']
-        
+
         if field_type is int:
             Field = IntegerField
         else:
             Field = StringField
-            
+
         field_obj = Field(s.keyword, render_kw={'class': 'input', 'placeholder': s.keyword},
                           default=s.value, description=dgs[s.keyword]['desc'])
         setattr(F, s.keyword, field_obj)
-    
+
     # instantiate the form
     form = F(request.form)
-    
+
     if request.method == 'POST':
         if not form.validate():
             flash_errors(form)
@@ -69,7 +75,7 @@ def admin():
                 for field in form:
                     if field.type in ['CSRFTokenField', 'HiddenField']:
                         continue
-                    
+
                     setting = db.session.query(GlobalSettings).filter(GlobalSettings.keyword == field.name).first()
                     if not setting:
                         # TODO log
@@ -85,6 +91,5 @@ def admin():
 
     # update selected choices
     # ~ form.field.data = [int(domain.id) for domain in this_organization.domains]
-        
-    return render_template('settings/global.html', conf=ConfigManager, current_user=current_user, form=form)
 
+    return render_template('settings/global.html', conf=ConfigManager, current_user=current_user, form=form)
