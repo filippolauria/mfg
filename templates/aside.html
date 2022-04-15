@@ -62,7 +62,7 @@
     <ul class="menu-list">
         <li>
             <ul>
-                <li><a>Global settings</a></li>
+                {{ render_aside_field('Global settings', url_for('settings.admin')) }}
                 <li><a>Events log</a></li>
             </ul>
         </li>

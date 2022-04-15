@@ -106,4 +106,8 @@ def create_app():
     from mfg.blueprints.radius import radius as radius_bp
     app.register_blueprint(radius_bp)
 
+	# settings
+    from mfg.blueprints.settings import settings as settings_bp
+    app.register_blueprint(settings_bp)
+
     return app

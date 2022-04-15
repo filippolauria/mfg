@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Global Settings{% endblock %}
+
+{% block content %}
+
+<div class="column is-12">
+    <h3 class="title">{{ self.title() }}</h3>
+    <div class="box">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ request.path }}">
+            {{ form.csrf_token }}
+            <table class="table is-fullwidth is-striped">
+                <thead>
+                    <tr>
+                        <th>Keyword</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                
+                {% for f in form %}
+                    {% if f.type != 'CSRFTokenField' and f.type != 'HiddenField' %}
+                        <tr>
+                            <td>{{ f.name }}</td>
+                            <td>{{ f }}</td>
+                            <td>{{ f.description }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+            <button class="button is-block is-info is-fullwidth">Save</button>
+        </form>
+    </div>
+</div>
+
+
+<form style="display: none;" id="delete-form" method="POST" action="{{ url_for('organization.delete') }}">
+    {{ form.csrf_token }}
+    {{ form.uid }}
+</form>
+
+{% endblock %}
