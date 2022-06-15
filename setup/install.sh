@@ -90,8 +90,8 @@ OS=$(grep '^ID=' /etc/*-release | cut -d'=' -f2)
 case $OS in
   "ubuntu"|"debian")
     echo "[+] Good! ${APP_SHORTNAME} can be installed on ${OS}."
-    if ! apt -f update; then echo "[!] Error when updating package information."; exit 1; fi
-
+    if ! apt -y update; then echo "[!] Error when updating package information."; exit 1; fi
+    apt -y install git python3-dev python3-virtualenv build-essential default-libmysqlclient-dev
     ;;
   *)
     echo "[!] We are sorry. ${APP_SHORTNAME} installation procedure has not been tested on ${OS}."
@@ -124,8 +124,20 @@ if [ -f "$CONFIG_FILE" ]; then
     N|n) echo "[+] Installation aborted"; exit 0 ;;
   esac
 
-  # rm -f "${CONFIG_FILE}"
+  rm -f "${CONFIG_FILE}"
 fi
+
+# we create a new python3 virtual environment
+echo "[+] Creating python3 virtual environment..."
+rm -rf "${INSTALLATION_DIR}/env"
+mkdir "${INSTALLATION_DIR}/env"
+chmod 640 "${INSTALLATION_DIR}/env"
+virtualenv --python=$(command -v python3) --quiet "${INSTALLATION_DIR}/env"
+
+# we install python3 dependencies
+echo "[+] Installing python3 dependencies..."
+. "${INSTALLATION_DIR}/env/bin/activate"
+"${INSTALLATION_DIR}/env/bin/pip3" install -r requirements.txt
 
 # get DB information
 while true; do
@@ -222,7 +234,7 @@ case $USE_SSL in
   *) USE_SSL="true" ;;
 esac
 
-cat <<EOF
+cat <<EOF > "${CONFIG_FILE}"
 {
     "MFG_ACCOUNT_DISABLED_GROUPNAME": "Account Disabled",
     "MFG_PASSWORD_EXPIRED_GROUPNAME": "Password Expired",
@@ -241,6 +253,8 @@ EOF
 
 # set up default dictionary symbolic link
 LISTS_DIR="${INSTALLATION_DIR}/resources/lists"
-ln -s "${LISTS_DIR}/dict-english.txt" "${LISTS_DIR}/dict.txt"
+if [ ! -L "${LISTS_DIR}/dict.txt" ] ; then
+  ln -s "${LISTS_DIR}/dict-english.txt" "${LISTS_DIR}/dict.txt"
+fi
 
 exit 0

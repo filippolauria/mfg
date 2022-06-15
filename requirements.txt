@@ -4,10 +4,12 @@ dnspython
 email-validator
 flake8
 Flask
+flask_mail
 Flask-Login
 Flask-SQLAlchemy
 Flask-WTF
 greenlet
+htmlmin
 idna
 importlib-metadata
 inflect
