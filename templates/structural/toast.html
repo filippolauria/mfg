@@ -1,0 +1,28 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    {% for category, message in messages %}
+      {% if category == 'success' or category == 'alert' %}
+        {% set text_color = 'white' %}
+      {% else %}
+        {% set text_color = 'black' %}
+      {% endif %}
+      <div class="toast align-items-center text-{{ text_color }} bg-{{ category }}" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">{{ message }}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+  
+  <script>
+  $(document).ready(function() {
+    $('.toast').each(function(i, elem){
+      bootstrap.Toast.getOrCreateInstance(elem).show();
+    });
+  });
+  </script>
+
+  {% endif %}
+{% endwith %}

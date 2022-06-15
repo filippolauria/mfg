@@ -4,6 +4,7 @@
 #
 # Copyright 2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -62,10 +63,11 @@ def is_admin_or_contact_person(func):
                 return func(*args, **kwargs)
 
             return abort(403)
-        
+
         return redirect(url_for('auth.login'))
 
     return decorated_function
+
 
 def is_regular_user(func):
     """

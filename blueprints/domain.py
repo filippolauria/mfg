@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,7 +26,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, redirect, url_for, request, flash
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -33,9 +34,9 @@ from mfg import db
 from mfg.forms import DomainForm, UidForm
 from mfg.models import Domain
 
-from mfg.helpers.config import ConfigManager
+from mfg.helpers.settings import GlobalSettingsManager
 from mfg.helpers.decorators import is_admin
-from mfg.helpers.utils import flash_errors
+from mfg.helpers.utils import flash_errors, render_template
 
 
 domain = Blueprint('domain', __name__)
@@ -51,7 +52,7 @@ def list():
 
     # this form is instantiated for enabling admin to delete domain names
     form = UidForm()
-    return render_template('domain/list.html', conf=ConfigManager, current_user=current_user, domains=domains,
+    return render_template('domain/list.html', conf=GlobalSettingsManager, current_user=current_user, domains=domains,
                            form=form)
 
 
@@ -103,9 +104,9 @@ def edit(uid):
     """
 
     # we get the domain name object associated with uid
-    obj = db.session.query(Domain).get(uid)
+    this_domain = db.session.query(Domain).get(uid)
     # if the domain name is not valid, we redirect to the domain names list
-    if not obj:
+    if not this_domain:
         flash("Select a domain name from the following list", 'danger')
         return redirect(url_for('domain.list'))
 
@@ -118,7 +119,8 @@ def edit(uid):
         else:
             # if the form validates, we edit the domain name
             try:
-                obj.domain_name = form.domain_name.data.lower()
+                this_domain.domain_name = form.domain_name.data.lower()
+                this_domain.modifiedby = current_user
                 db.session.commit()
 
                 # then we prepare the message to be flashed back to admin
@@ -129,9 +131,9 @@ def edit(uid):
                 flash(str(e), 'danger')
 
     # we refresh form data and domain names list
-    form.domain_name.data = obj.domain_name
+    form.domain_name.data = this_domain.domain_name
     domains = db.session.query(Domain).all()
-    return render_template('domain/edit.html', conf=ConfigManager, current_user=current_user, form=form,
+    return render_template('domain/edit.html', conf=GlobalSettingsManager, current_user=current_user, form=form,
                            domains=domains)
 
 
@@ -156,7 +158,7 @@ def create():
                 # we add a domain ONLY if it does not already exist
                 if not domain:
                     # add the new domain to the db
-                    new_domain = Domain(domain_name=domain_name)
+                    new_domain = Domain(domain_name=domain_name, createdby=current_user)
                     db.session.add(new_domain)
                     db.session.commit()
 
@@ -174,5 +176,5 @@ def create():
                 flash(str(e), 'danger')
 
     domains = db.session.query(Domain).all()
-    return render_template('domain/create.html', conf=ConfigManager, current_user=current_user, form=form,
+    return render_template('domain/create.html', conf=GlobalSettingsManager, current_user=current_user, form=form,
                            domains=domains)

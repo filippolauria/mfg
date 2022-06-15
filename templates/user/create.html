@@ -1,105 +1,129 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Create an user{% endblock %}
 
+{% block extraheader %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
+
+{% from "structural/macros.html" import render_inputfield, render_checkbox %}
+
 {% block content %}
-<div class="column is-10 is-offset-1">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
+
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-person-plus-fill me-2"></i>{{ self.title() }}</h2>
+
+  <form class="row" method="POST" action="{{ url_for('user.create') }}">
+    {{ form.csrf_token }}
     
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    {% from "macros.html" import render_inputfield, render_checkbox %}
-
-        <form method="POST" action="{{ url_for('user.create') }}">
-            {{ form.csrf_token }}
-            
-            {{ render_inputfield(form.email, 'envelope-open-text') }}
-            
-            <div class="field">
-                <div class="field-body">
-                    {{ render_inputfield(form.firstname) }}
-                    {{ render_inputfield(form.lastname) }}
-                </div>
-            </div>
-            
-            <div class="field">
-                <label class="label" for="{{ form.organization.id }}">{{ form.organization.label.text }}</label>
-                <div class="select is-fullwidth">
-                    {{ form.organization }}
-                </div>
-            </div>
-            
-            <hr class="is-divider">
-            
-            {{ render_inputfield(form.username, 'user') }}
-            
-            <div class="field">
-                <label class="label" for="{{ form.registration_method.id }}">{{ form.registration_method.label.text }}</label>
-                <div class="select is-fullwidth">
-                    {{ form.registration_method }}
-                </div>
-            </div>
-            
-            <div class="field">
-                <div class="field-body">
-                    {{ render_inputfield(form.password1, 'lock') }}
-                    {{ render_inputfield(form.password2, 'lock') }}
-                </div>
-            </div>
-            
-            <hr class="is-divider">
-            
-            {{ render_inputfield(form.expires_in) }}
-            {{ render_checkbox(form.self_renew) }}
-            
-            {{ render_inputfield(form.disable_on) }}
-            {{ render_checkbox(form.auto_disable) }}
-            
-            <button class="button is-block is-info is-fullwidth">Create</button>
-        </form>
+    <div class="col-12 col-md-6 my-1">{{ render_inputfield(form.firstname) }}</div>
+    <div class="col-12 col-md-6 my-1">{{ render_inputfield(form.lastname) }}</div>
+    
+    <div class="col-12 col-md-6 my-1">{{ render_inputfield(form.email, 'envelope-open-fill') }}</div>
+    
+    <div class="col-12 col-md-6 my-1">
+      <label class="form-label" for="{{ form.organization.id }}">{{ form.organization.label.text }}</label>
+      {{ form.organization(class_="form-select") }}
     </div>
+    
+    <hr class="my-3">
+    
+    <div class="col-12 col-md-6 my-1">
+      {{ render_inputfield(form.username, 'person-fill') }}
+    </div>
+    
+    <div class="col-12 col-md-6 my-1">
+      <label class="form-label" for="{{ form.registration_method.id }}">{{ form.registration_method.label.text }}</label>
+      {{ form.registration_method(class_="form-select") }}
+    </div>
+    
+    <div class="col-12 col-md-6 my-1">
+      <label for="{{ form.password1.id }}" class="form-label">{{ form.password1.label.text }}</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+        {{ form.password1 }}
+        <button id="btn-random-password" type="button" class="input-group-text" title="Generate random password">
+          <i class="bi bi-shuffle"></i>
+        </button>
+        <button id="btn-show-hide-password" type="button" class="input-group-text" title="Show/Hide">
+          <i class="bi bi-eye-fill"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="col-12 col-md-6 my-1">{{ render_inputfield(form.password2, 'lock-fill') }}</div>
+    
+    <hr class="my-3">
+    
+    <div class="col-12 mt-1">{{ render_inputfield(form.expires_in) }}</div>
+    <div class="col-12">{{ render_checkbox(form.self_renew) }}</div>
+    <div class="col-12 mt-1">{{ render_inputfield(form.disable_on) }}</div>
+    <div class="col-12">{{ render_checkbox(form.auto_disable) }}</div>
+    
+    <div class="col-12 d-grid my-1">
+      <button type="submit" class="d-grid btn btn-primary">{{ self.title() }}</button>
+    </div>
+    
+  </form>
+
 </div>
 
 <script>
-var registration_method_obj = document.getElementById("registration_method");
-var password1_obj = document.getElementById("password1");
-var password2_obj = document.getElementById("password2");
-registration_method_obj.addEventListener("change", function() {
-    var link_via_mail = (registration_method_obj.value === 'link_via_mail');
-    password1_obj.required = !link_via_mail;
-    password2_obj.required = !link_via_mail;
-    password1_obj.disabled = link_via_mail;
-    password2_obj.disabled = link_via_mail;
+
+$(document).ready(function(){
+  var password1Element = $('#{{ form.password1.id }}'),
+      password2Element = $('#{{ form.password2.id }}'),
+      autoDisableElement = $('#{{ form.auto_disable.id }}'),
+      disableOnElement = $('#{{ form.disable_on.id }}'),
+      registrationMethodElement = $('#{{ form.registration_method.id }}'),
+      selfRenewElement = $('#{{ form.self_renew.id }}'),
+      buttonShowHideSelector = '#btn-show-hide-password',
+      buttonRandomSelector = '#btn-random-password';
+
+  function toggleRegistrationMethodElements() {
+    var linkViaMail = ($('#{{ form.registration_method.id }} option:selected').val() == 'link_via_mail');
+    password1Element.prop("required", !linkViaMail).prop("disabled", linkViaMail).val("");
+    password2Element.prop("required", linkViaMail).prop("disabled", linkViaMail).val(""); 
+    $(buttonShowHideSelector).prop("disabled", linkViaMail);
+    $(buttonRandomSelector).prop("disabled", linkViaMail);
+  }
+
+  function toggleAutoDisableElements() {
+    var autoDisable = autoDisableElement.prop('checked');
+    disableOnElement.prop("required", autoDisable).prop("disabled", !autoDisable);
+    if (!autoDisable) {
+        disableOnElement.val("");
+    } else {
+        disableOnElement.val('{{ form.disable_on.data }}');
+    }
+  }
+
+  registrationMethodElement.change(function(){
+    toggleRegistrationMethodElements();
+  });
+
+  autoDisableElement.change(function(){
+    toggleAutoDisableElements();
+  });
+  
+  //~ init elements
+  registrationMethodElement.val('link_via_mail');
+  toggleRegistrationMethodElements();
+  
+  autoDisableElement.prop('checked', true);
+  toggleAutoDisableElements();
+  
+  selfRenewElement.prop('checked', true);
+  
+  generatePasswordTogglerAndShuffler(
+    '#{{ form.password1.id }}',
+    '#{{ form.password2.id }}',
+    buttonShowHideSelector,
+    buttonRandomSelector,
+    '{{ url_for("main.random_password") }}'
+  );
+  
 });
-
-
-var auto_disable_obj = document.getElementById("auto_disable");
-var disable_on_obj = document.getElementById("disable_on");
-auto_disable_obj.addEventListener("change", function() {
-    var auto_disable = auto_disable_obj.checked;
-    disable_on_obj.required = auto_disable;
-    disable_on_obj.disabled = !auto_disable;
-
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    registration_method_obj.value = 'password_by_admin';
-    password1_obj.required = true;
-    password2_obj.required = true;
-    password1_obj.disabled = false;
-    password2_obj.disabled = false;
-    
-    auto_disable_obj.checked = false;
-    disable_on_obj.required = false;
-    disable_on_obj.disabled = true;
-}, false);
 
 </script>
 

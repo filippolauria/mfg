@@ -1,22 +1,31 @@
-<div class="column is-10 is-offset-1">
-    <h5 class="title">Organizations summary</h5>
-    <div class="box">
-        <table class="table is-fullwidth is-striped">
-            <thead>
-                <tr>
-                    <th>Short Name</th>
-                    <th>Full Name</th>
-                </tr>
-            </thead>
-            <tbody>
-            
-            {% for o in organizations %}
-                <tr>
-                    <td>{{ o.shortname }}</td>
-                    <td>{{ o.fullname }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+{% if organizations %}
+<div class="container px-4 py-3">
+  <h3 class="pb-2 border-bottom"><i class="bi-list-ul me-2"></i>Organizations summary</h3>
+  
+  <div class="row">
+    <div class="col-12">
+      <table id="organization-shortlist" class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">Short Name</th>
+            <th scope="col">Full Name</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for o in organizations %}
+          <tr>
+            <td>{{ o.shortname }}</td>
+            <td>{{ o.fullname }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
+  
 </div>
+
+{% from "structural/macros.html" import shortlist_datatable %}
+{{ shortlist_datatable('#organization-shortlist') }}
+
+{% endif %}

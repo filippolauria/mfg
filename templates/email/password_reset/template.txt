@@ -1,0 +1,11 @@
+Hello {{ user.firstname }},
+we have received a password reset request.
+
+For this reason, we have generated a unique password reset link.
+It can be used to reset the password associated with your account having username {{ user.username }}.
+You just need to visit the page {{ token.reset_or_activate_url() }} and follow the instructions.
+
+If you have not initiated this request, simply ignore this email.
+Also, keep in mind that, this is an automatically generated email, please do not reply!
+
+Copyright {{ conf.get('application.name') }}

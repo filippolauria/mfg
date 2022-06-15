@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -26,12 +27,34 @@
 #
 
 import enum
-from datetime import date
-from sqlalchemy.sql import expression
+import json
+import os
+from datetime import date, datetime
+from flask import current_app, url_for
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.sql import expression, func
 from sqlalchemy.types import Enum
 
 from mfg import db
-from mfg.config import table_prefix, account_disabled_groupname, password_expired_groupname
+from mfg.helpers.hashes import check_password_hash
+
+
+# we are outside the context of flask app, so we manually load
+# table prefix directly from the json configuration file
+# if we cannot, we fallback to 'mfg_'
+table_prefix = ''
+config_json = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+if (os.path.isfile(config_json) and os.access(config_json, os.R_OK)):
+    with open(config_json, 'r') as fd:
+        try:
+            d = json.load(fd)
+            table_prefix = d['MFG_DATABASE_TABLE_PREFIX']
+
+        except Exception:
+            pass
+
+if not table_prefix:
+    table_prefix = 'mfg_'
 
 
 class Nas(db.Model):
@@ -61,9 +84,9 @@ class Radacct(db.Model):
     nasipaddress = db.Column(db.String(15, 'utf8_bin'), nullable=False, index=True, server_default=db.FetchedValue())
     nasportid = db.Column(db.String(15, 'utf8_bin'))
     nasporttype = db.Column(db.String(32, 'utf8_bin'))
-    acctstarttime = db.Column(db.DateTime, index=True)
-    acctupdatetime = db.Column(db.DateTime)
-    acctstoptime = db.Column(db.DateTime, index=True)
+    acctstarttime = db.Column(db.DateTime(timezone=True), index=True)
+    acctupdatetime = db.Column(db.DateTime(timezone=True))
+    acctstoptime = db.Column(db.DateTime(timezone=True), index=True)
     acctinterval = db.Column(db.Integer, index=True)
     acctsessiontime = db.Column(db.Integer, index=True)
     acctauthentic = db.Column(db.String(32, 'utf8_bin'))
@@ -108,7 +131,8 @@ class Radgroupcheck(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    groupname = db.Column(db.String(64, 'utf8_bin'), db.ForeignKey(table_prefix + 'group.groupname'))
+    groupname = db.Column(db.String(64, 'utf8_bin'),
+                          db.ForeignKey(table_prefix + 'group.groupname', ondelete='CASCADE'))
     attribute = db.Column(db.String(64, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
     op = db.Column(db.String(2, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
     value = db.Column(db.String(253, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
@@ -121,7 +145,8 @@ class Radgroupreply(db.Model):
     __table_args__ = {'extend_existing': True}
 
     id = db.Column(db.Integer, primary_key=True)
-    groupname = db.Column(db.String(64, 'utf8_bin'), db.ForeignKey(table_prefix + 'group.groupname'))
+    groupname = db.Column(db.String(64, 'utf8_bin'),
+                          db.ForeignKey(table_prefix + 'group.groupname', ondelete='CASCADE'))
     attribute = db.Column(db.String(64, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
     op = db.Column(db.String(2, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
     value = db.Column(db.String(253, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
@@ -137,7 +162,7 @@ class Radpostauth(db.Model):
     username = db.Column(db.String(64, 'utf8_bin'), db.ForeignKey(table_prefix + 'user.username'))
     _pass = db.Column('pass', db.String(64, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
     reply = db.Column(db.String(32, 'utf8_bin'), nullable=False, server_default=db.FetchedValue())
-    authdate = db.Column(db.DateTime, nullable=False, server_default=db.FetchedValue())
+    authdate = db.Column(db.DateTime(timezone=True), nullable=False, server_default=db.FetchedValue())
 
     user = db.relationship("User", back_populates="radpostauth_attributes")
 
@@ -172,11 +197,33 @@ t_contactperson_organization = db.Table(table_prefix + 'contactperson_organizati
 
 
 t_organization_group = db.Table(table_prefix + 'organization_group',
-                                 db.Column('organization_id', db.Integer,
-                                           db.ForeignKey(table_prefix + 'organization.id'), nullable=False),
-                                 db.Column('group_id', db.Integer,
-                                           db.ForeignKey(table_prefix + 'group.id'), nullable=False),
-                                 extend_existing=True)
+                                db.Column('organization_id', db.Integer,
+                                          db.ForeignKey(table_prefix + 'organization.id'), nullable=False),
+                                db.Column('group_id', db.Integer,
+                                          db.ForeignKey(table_prefix + 'group.id'), nullable=False),
+                                extend_existing=True)
+
+
+class Base(object):
+    @declared_attr
+    def createdby_id(cls):
+        return db.Column(db.Integer, db.ForeignKey(table_prefix + 'user.id', ondelete='SET NULL'), nullable=True)
+    
+    @declared_attr
+    def createdby(cls):
+        return db.relationship('User', primaryjoin=lambda: User.id == cls.createdby_id)
+
+    created_on = db.Column(db.DateTime(timezone=True), nullable=True, server_default=func.now())
+    
+    @declared_attr
+    def modifiedby_id(cls):
+        return db.Column(db.Integer, db.ForeignKey(table_prefix + 'user.id', ondelete='SET NULL'), nullable=True)
+
+    @declared_attr
+    def modifiedby(cls):
+        return db.relationship('User', primaryjoin=lambda: User.id == cls.modifiedby_id)
+
+    modified_on = db.Column(db.DateTime(timezone=True), nullable=True, onupdate=func.now())
 
 
 class Organization(db.Model):
@@ -190,7 +237,7 @@ class Organization(db.Model):
     groups = db.relationship('Group', secondary=t_organization_group, back_populates='organizations')
     domains = db.relationship('Domain', secondary=t_organization_domain, back_populates='organizations')
     contact_persons = db.relationship('User', secondary=t_contactperson_organization, back_populates='organizations')
-    settings = db.relationship('OrganizationSettings', back_populates="organization")
+    settings = db.relationship('OrganizationSettings', back_populates="organization", passive_deletes=True)
     waiting_for_approval = db.relationship('WaitingForApproval', back_populates="organization")
 
     def __repr__(self):
@@ -242,16 +289,29 @@ class User(db.Model):
         return bool(self.disable_on)
 
     def is_expired(self):
-        return bool(password_expired_groupname in self.groups)
+        groupname = current_app.config['MFG_PASSWORD_EXPIRED_GROUPNAME']
+        expired_group = db.session.query(Group).filter(Group.groupname == groupname).first()
+        return bool(expired_group in self.groups)
 
-    def is_disabled(self):
-        return bool(account_disabled_groupname in self.groups)
+    def should_be_disabled(self):
+        return bool(self.disable_on and datetime.now() > self.disable_on)
+
+    def in_disabled_group(self):
+        groupname = current_app.config['MFG_ACCOUNT_DISABLED_GROUPNAME']
+        disabled_group = db.session.query(Group).filter(Group.groupname == groupname).first()
+        return bool(disabled_group in self.groups)
 
     def managed_organizations(self):
         if self.is_admin:
             return db.session.query(Organization).all()
 
         return self.organizations
+
+    def is_contact_person_for(self, organization):
+        return bool(organization.id in [o.id for o in self.managed_organizations()])
+
+    def can_manage(self, user):
+        return bool(self.is_admin or self.is_contact_person_for(user.organization))
 
     def is_admin_or_contact_person(self):
         return bool(self.managed_organizations())
@@ -268,8 +328,25 @@ class User(db.Model):
     def get_id(self):
         return str(self.id)
 
+    def is_reusing_the_old_password(self, password):
+        attrs = db.session.query(Radcheck).filter((Radcheck.username == self.username) &
+                                                  (Radcheck.attribute.like("%-Password")) &
+                                                  (Radcheck.op == ':=')).all()
+        reused = False
+        for attr in attrs:
+            try:
+                reused = check_password_hash(password, attr.value, attr.attribute)
+                if reused:
+                    break
 
-class Domain(db.Model):
+            except ValueError:
+                # TODO log => attr.attribute algorithm not implemented
+                continue
+
+        return reused
+
+
+class Domain(db.Model, Base):
     __tablename__ = table_prefix + 'domain'
 
     id = db.Column(db.Integer, nullable=False, primary_key=True)
@@ -281,20 +358,19 @@ class Domain(db.Model):
         return f"<Domain {self.domain_name}>"
 
 
-class Group(db.Model):
+class Group(db.Model, Base):
     __tablename__ = table_prefix + 'group'
 
     id = db.Column(db.Integer, primary_key=True)
     groupname = db.Column(db.String(64, 'utf8_bin'), nullable=False, unique=True, index=True)
-    radgroupcheck_attributes = db.relationship('Radgroupcheck', back_populates='group')
-    radgroupreply_attributes = db.relationship('Radgroupreply', back_populates='group')
+    radgroupcheck_attributes = db.relationship('Radgroupcheck', back_populates='group', passive_deletes=True)
+    radgroupreply_attributes = db.relationship('Radgroupreply', back_populates='group', passive_deletes=True)
     users = db.relationship('User', back_populates='groups', secondary=t_radusergroup)
 
     organizations = db.relationship('Organization', secondary=t_organization_group, back_populates='groups')
 
-    creator_id = db.Column(db.Integer, db.ForeignKey(table_prefix + 'user.id'), nullable=True)
-    creator = db.relationship('User')
-    created_on = db.Column(db.Date, nullable=False, default=date.today)
+    def __repr__(self):
+        return f"<Group {self.groupname}>"
 
 
 class ActionEnum(enum.Enum):
@@ -313,6 +389,12 @@ class Token(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey(table_prefix + 'user.id'), nullable=False)
     user = db.relationship("User", back_populates="tokens")
 
+    def is_expired(self):
+        return bool(self.expires_on < datetime.now())
+        
+    def reset_or_activate_url(self):
+        return url_for('user.reset_or_activate', token=self.token, _external=True)
+
 
 class SignupToken(db.Model):
     __tablename__ = table_prefix + 'signup_token'
@@ -321,6 +403,9 @@ class SignupToken(db.Model):
     email = db.Column(db.String(253, 'utf8_bin'), unique=True, nullable=False)
     token = db.Column(db.String(32, 'utf8_bin'), unique=True, nullable=False)
     expires_on = db.Column(db.DateTime(timezone=True), nullable=False)
+
+    def is_expired(self):
+        return bool(self.expires_on < datetime.now())
 
 
 class GlobalSettings(db.Model):
@@ -335,9 +420,11 @@ class OrganizationSettings(db.Model):
     __tablename__ = table_prefix + 'organization_settings'
 
     id = db.Column(db.Integer, nullable=False, primary_key=True)
-    organization_id = db.Column(db.Integer, db.ForeignKey(table_prefix + 'organization.id'), nullable=False)
+    organization_id = db.Column(db.Integer,
+                                db.ForeignKey(table_prefix + 'organization.id', ondelete='CASCADE'),
+                                nullable=False)
     organization = db.relationship("Organization", back_populates="settings")
-    keyword = db.Column(db.String(64, 'utf8_bin'), unique=True, nullable=False)
+    keyword = db.Column(db.String(64, 'utf8_bin'), unique=False, nullable=False)
     value = db.Column(db.String(64, 'utf8_bin'), unique=False, nullable=False)
 
 

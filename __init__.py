@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,19 +26,42 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from mfg.config import secret_key, db_user, db_pass, db_host, db_port, db_name
+import json
+import os
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_mail import Mail
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.routing import BaseConverter
 
 
-# we start by instantiating the db object, that we can use within our app
+# we instantiate our SQLAlchemy object called db, that we can use within our app.
+# This will be set later at configuration time, using the init_app method
 db = SQLAlchemy()
+
+# we instantiate our Mail object called mail, that we can use within our app.
+# This will be set later at configuration time, using the init_app method
+mail = Mail()
 
 
 def create_app():
     """ this function creates the app object needed by Flask """
+
+    # we start creating the app object
+    app = Flask(__name__, static_url_path='', static_folder='static', template_folder='templates')
+
+    # we check if the config.json file exists and is readable
+    config_json = os.path.join(app.root_path, 'config.json')
+    if not (os.path.isfile(config_json) and os.access(config_json, os.R_OK)):
+        print(f"[!] {config_json} does not exist or is not readable")
+        return
+
+    with open(config_json, 'r') as fd:
+        try:
+            json.load(fd)
+        except Exception:
+            print(f"[!] {config_json} is not a valid json file")
+            return
 
     # we need this class in order to use regex as URL param
     class RegexConverter(BaseConverter):
@@ -45,25 +69,24 @@ def create_app():
             super(RegexConverter, self).__init__(url_map)
             self.regex = items[0]
 
-    # we start creating the app object
-    app = Flask(__name__, static_url_path='', static_folder='static', template_folder='templates')
-
     # we add our previously defined RegexConverter
     app.url_map.converters['regex'] = RegexConverter
 
-    # we also add other environment variables
-    app.config['SECRET_KEY'] = secret_key
-    app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # we load application configuration from our config.json file
+    app.config.from_file(config_json, load=json.load)
 
-    # then we associate the app to our db object
+    # then we associate the app with our db object
     db.init_app(app)
+
+    # and with our mail object
+    mail.init_app(app)
 
     # we also instantiate our login manager, and finally associate the app to it
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
 
+    
     # we then import the User model
     from mfg.models import User
 
@@ -106,7 +129,7 @@ def create_app():
     from mfg.blueprints.radius import radius as radius_bp
     app.register_blueprint(radius_bp)
 
-	# settings
+    # settings
     from mfg.blueprints.settings import settings as settings_bp
     app.register_blueprint(settings_bp)
 

@@ -1,69 +1,75 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Organizations list{% endblock %}
 
-{% block content %}
+{% block extraheader %}
+{% include "structural/header/tables.html" %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
 
-<div class="column is-10 is-offset-1">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% if organizations %}
-        <table class="table is-fullwidth is-striped">
-            <thead>
-                <tr>
-                    <th>Short Name</th>
-                    <th>Full Name</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            
-            {% for o in organizations %}
-                <tr>
-                    <td class="is-vcentered">{{ o.shortname }}</td>
-                    <td class="is-vcentered">{{ o.fullname }}</td>
-                    <td class="is-vcentered">
-                        <div class="buttons">
-                            <a class="button is-light" href="{{ url_for('organization.associate', uid=o.id) }}" title="Associate domain names to this organization">
-                                <span class="icon is-small">
-                                    <i class="fas fa-list"></i>
-                                </span>
-                            </a>
-                            <a class="button is-light" href="{{ url_for('organization.edit', uid=o.id) }}" title="Edit this organization">
-                                <span class="icon is-small">
-                                    <i class="fas fa-edit"></i>
-                                </span>
-                            </a>
-                            <button class="button is-light" onclick="set_and_submit({{ o.id }})" title="Delete this organization">
-                                <span class="icon is-small">
-                                    <i class="fas fa-trash"></i>
-                                </span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p>No organization has been found. Create one from <a href="{{ url_for('organization.create') }}">here</a>.</p>
-        {% endif %}
-    </div>
+{% block content %}
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-link-45deg me-2"></i>{{ self.title() }}</h2>
+  
+  {% if organizations %}
+  <table id="organization-list" class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Short Name</th>
+        <th scope="col">Full Name</th>
+        <th scope="col non-sortable">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in organizations %}
+      <tr>
+        <td>{{ o.shortname }}</td>
+        <td>{{ o.fullname }}</td>
+        <td class="text-end">
+          <div class="btn-group">
+            <a class="btn btn-outline-secondary" href="{{ url_for('organization.associate', uid=o.id) }}" title="Associate domain names to this organization">
+              <i class="bi bi-card-heading"></i>
+            </a>
+            <a class="btn btn-outline-secondary" href="{{ url_for('organization.edit', uid=o.id) }}" title="Edit this organization">
+              <i class="bi bi-pencil-square"></i>
+            </a>
+            <button type="button" data-organization-id="{{ o.id }}" class="btn btn-outline-secondary btn-delete" title="Delete this organization"><i class="bi bi-trash3"></i></button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="fs-5">No organization has been found. Create one from <a href="{{ url_for('organization.create') }}">here</a>.</p>
+  {% endif %}
 </div>
 
-
-<form style="display: none;" id="delete-form" method="POST" action="{{ url_for('organization.delete') }}">
+{% if form %}
+<form style="display: none;" id="form-delete" method="POST" action="{{ url_for('organization.delete') }}">
     {{ form.csrf_token }}
     {{ form.uid }}
 </form>
+{% endif %}
+
+<script>
+$(document).ready(function() {
+  {% if form %}
+  // ~ generate delete button actions
+  generateDeleteButtons('#form-delete', '#{{ form.uid.id }}', 'organization-id', '.btn-delete');
+  {% endif %}
+  
+  $('#organization-list').DataTable({
+      "paging": false,
+      "info": false,
+      "ordering": true,
+      columnDefs: [{
+        orderable: false,
+        targets: "non-sortable"
+      }]
+    });
+  
+});
+</script>
 
 {% endblock %}

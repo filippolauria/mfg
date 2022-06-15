@@ -4,6 +4,7 @@
 #
 # Copyright 2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #

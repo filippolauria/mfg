@@ -1,57 +1,66 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Associate domain names{% endblock %}
 
+{% block extraheader %}{% include "structural/header/tables.html" %}{% endblock %}
+
+{% from "structural/macros.html" import render_inputfield %}
+
 {% block content %}
 
-<div class="column is-10 is-offset-1">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <p>You are associating domain names to {{ organization.fullname }} ({{ organization.shortname }})</p>
-        <form method="POST" action="{{ request.path }}">
-            {{ form.csrf_token }}
-            <div class="field">
-                <label class="label">{{ form.field.label.text }}</label>
-                <div class="select is-multiple is-fullwidth">
-                    {{ form.field }}
-                </div>
-            </div>
-            <button class="button is-block is-info is-fullwidth">Associate</button>
-        </form>
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-link-45deg me-2"></i>{{ self.title() }}</h2>
+
+  <div class="row">
+    <p class="fs-5">You are associating domain names to {{ organization.fullname }} ({{ organization.shortname }}).</p>
+  </div>
+  
+  <form class="row" method="POST" action="{{ request.path }}">
+    {{ form.csrf_token }}
+    {{ render_inputfield(form.field) }}
+    <div class="d-grid">
+      <button type="submit" class="btn btn-primary mt-3">Associate</button>
     </div>
-    
-    <h4 class="title is-4">Associated domains summary</h4>
-    <div class="box">
-    {% if organization.domains %}
-        
-    <p>Here you have a list of all the domains associated with {{ organization.shortname }}:</p>
-    <table class="table is-fullwidth is-striped">
-        <thead>
-            <tr>
-                <th>Domain name</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in organization.domains %}
-            <tr><td>{{ d.domain_name }}</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>No domains associated to this organization.</p>
-    {% endif %}
-    
-    </div>
+  </form>
+  
 </div>
 
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi-list-ul me-2"></i>Associate domains summary</h2>
+  
+  <div class="row">
+    {% if organization.domains %}
+    <p class="fs-5">Here you have a list of all the domains associated with <strong>{{ organization.shortname }}</strong>:</p>
+
+    <table id="domain-list" class="table table-striped">
+      <thead>
+        <tr>
+          <th scope="col">Domain name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in organization.domains %}
+        <tr><td>{{ d.domain_name }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="fs-5">No domains associated to this organization.</p>
+    {% endif %}
+  
+  </div>
+
+</div>
+
+<script>
+  $(document).ready(function() {
+    $('#domain-list').DataTable({
+      "paging": false,
+      "info": false,
+      "ordering": true,
+      "searching": false
+    });
+  });
+</script>
 
 {% endblock %}

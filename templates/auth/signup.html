@@ -1,0 +1,59 @@
+{% extends "structural/centered_base.html" %}
+
+{% block title %}Self-signup feature{% endblock %}
+
+{% block content %}
+
+<main>
+{% if not form %}
+  <div class="px-4 py-5 my-5 text-center">
+    <h1 class="fw-bold">{{ self.title() }}</h1>
+    <div class="col-lg-6 mx-auto">
+      <p class="lead mb-4">The self-signup feature is not enabled.</p>
+      <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg px-4 gap-3">Back to home</a>
+      </div>
+    </div>
+  </div>
+{% else %}
+
+  <div class="container d-flex flex-column">
+    <div class="row align-items-center justify-content-center g-0 min-vh-100">
+      <div class="col-lg-5 col-md-8 py-8 py-xl-0">
+        
+        <!-- Card -->
+        <div class="card shadow">
+          <!-- Card body -->
+          <div class="card-body px-6">
+            <div class="mb-4 text-center">
+              <h1 class="mb-1 fw-bold display-7">{{ self.title() }}</h1>
+              <p>Insert your email address and see if you can self-generate an account.</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('auth.signup') }}">
+              {{ form.csrf_token }}
+              
+              <div class="form-floating mb-3">
+                {{ form.email }}
+                <label for="{{ form.email.id }}" class="form-label">{{ form.email.label.text }}</label>
+              </div>
+              
+              <div class="mb-1 d-grid">
+                <button type="submit" class="btn btn-primary">Signup</button>
+              </div>
+            </form>
+            
+            <p class="text-end"><a class="btn btn-link" href="{{ url_for('auth.login') }}">Back to login page</a></p>
+
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  {% include "structural/toast.html" %}
+{% endif %}
+</main>
+
+{% endblock %}

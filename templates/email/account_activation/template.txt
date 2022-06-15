@@ -1,0 +1,13 @@
+Hello {{ user.firstname }},
+your account is about to be activated!
+
+A unique account activation link has been generated.
+
+It can be used to choose a password to associate with your account.
+Also keep in mind that the username associated with your new account is {{ user.username }}.
+You just need to visit the page {{ token.reset_or_activate_url() }} and follow the instructions.
+
+If you have not requested a new account activation, simply ignore this email.
+Finally, please note that this is an automatically generated email, do not reply!
+
+Copyright {{ conf.get('application.name') }}

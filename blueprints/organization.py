@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,17 +26,17 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, redirect, url_for, request, flash
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from mfg import db
-from mfg.forms import OrganizationForm, UidForm, MultipleSelectForm
+from mfg.forms import CreateOrganizationForm, UidForm, MultipleSelectForm
 from mfg.models import Organization, Domain
 
-from mfg.helpers.config import ConfigManager
+from mfg.helpers.settings import GlobalSettingsManager, OrganizationSettingsManager
 from mfg.helpers.decorators import is_admin
-from mfg.helpers.utils import flash_errors
+from mfg.helpers.utils import flash_errors, render_template
 
 
 organization = Blueprint('organization', __name__)
@@ -51,7 +52,7 @@ def list():
 
     # this form is instantiated for enabling admin to delete organization(s)
     form = UidForm()
-    return render_template('organization/list.html', conf=ConfigManager, current_user=current_user,
+    return render_template('organization/list.html', conf=GlobalSettingsManager, current_user=current_user,
                            organizations=organizations, form=form)
 
 
@@ -110,7 +111,7 @@ def edit(uid):
         return redirect(url_for('organization.list'))
 
     # we instantiate the organization form object with the data posted by admin
-    form = OrganizationForm(request.form)
+    form = CreateOrganizationForm(request.form)
 
     if request.method == 'POST':
         if not form.validate():
@@ -120,6 +121,7 @@ def edit(uid):
             try:
                 this_organization.shortname = form.shortname.data
                 this_organization.fullname = form.fullname.data
+
                 db.session.commit()
 
                 # then we prepare the message to be flashed back to admin
@@ -134,7 +136,7 @@ def edit(uid):
     form.fullname.data = this_organization.fullname
     organizations = db.session.query(Organization).all()
 
-    return render_template('organization/edit.html', conf=ConfigManager, current_user=current_user, form=form,
+    return render_template('organization/edit.html', conf=GlobalSettingsManager, current_user=current_user, form=form,
                            organizations=organizations)
 
 
@@ -145,8 +147,8 @@ def create():
     this view allows admin to create an organization
     """
 
-    # we instantiate the OrganizationForm object
-    form = OrganizationForm(request.form)
+    # we instantiate the CreateOrganizationForm object
+    form = CreateOrganizationForm(request.form)
     if request.method == 'POST':
         if not form.validate():
             flash_errors(form)
@@ -156,6 +158,9 @@ def create():
                 new_organization = Organization(shortname=form.shortname.data, fullname=form.fullname.data)
                 db.session.add(new_organization)
                 db.session.commit()
+
+                # set organization configuration defaults (triggers SQLAlchemyError exception)
+                OrganizationSettingsManager(new_organization).set_default()
 
                 # we empty the form
                 form.shortname.data = ''
@@ -169,7 +174,7 @@ def create():
                 flash(str(e), 'danger')
 
     organizations = db.session.query(Organization).all()
-    return render_template('organization/create.html', conf=ConfigManager, current_user=current_user, form=form,
+    return render_template('organization/create.html', conf=GlobalSettingsManager, current_user=current_user, form=form,
                            organizations=organizations)
 
 
@@ -227,5 +232,5 @@ def associate(uid):
     # update selected choices
     form.field.data = [int(domain.id) for domain in this_organization.domains]
 
-    return render_template('organization/associate.html', conf=ConfigManager, current_user=current_user, form=form,
+    return render_template('organization/associate.html', conf=GlobalSettingsManager, current_user=current_user, form=form,
                            organization=this_organization)

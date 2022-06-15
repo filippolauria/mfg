@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,22 +26,22 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from datetime import date, timedelta, datetime
-from flask import Blueprint, request, redirect, render_template, flash, url_for
+
+import os
+import random
+from datetime import date, timedelta
+from flask import Blueprint, request, redirect, flash, url_for, current_app, abort
 from flask_login import current_user, logout_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from mfg import db
-from mfg.config import account_disabled_groupname, password_expired_groupname
-from mfg.forms import UidForm, SearchByUsernameForm, FirstAccessForm, PasswordForm, UserPersonInfoForm
-from mfg.models import User, Organization, Group, Radcheck, Radgroupcheck, Token, ActionEnum
+from mfg.forms import SearchByUsernameForm, FirstAccessForm
+from mfg.models import User, Organization, Domain, Group, Radcheck, Radgroupcheck, GlobalSettings
 
-from mfg.helpers.config import ConfigManager, OrganizationConfigManager
-from mfg.helpers.decorators import is_authenticated, is_admin_or_contact_person, is_regular_user
+from mfg.helpers.settings import GlobalSettingsManager, OrganizationSettingsManager
+from mfg.helpers.decorators import is_authenticated, is_admin_or_contact_person
 from mfg.helpers.hashes import make_hash
-from mfg.helpers.utils import flash_errors, make_token
-from mfg.helpers.validators import MinMaxLengthAndEqualIfRequired
-
+from mfg.helpers.utils import flash_errors, render_template
 
 
 main = Blueprint('main', __name__)
@@ -64,7 +65,11 @@ def index():
     # if we have at least one user and one organization we render the welcome message
     # TODO make the welcome message editable
     if users and organizations:
-        return render_template('index.html', conf=ConfigManager)
+        if request.form:
+            # TODO log that someone is attempting to execute this action
+            pass
+
+        return render_template('index.html', conf=GlobalSettingsManager)
 
     # we logout an (improbable) logged in user
     logout_user()
@@ -86,24 +91,35 @@ def index():
 
                 # then we add the new user to the db
                 username = form.username.data
-                new_user = User(email=form.email.data, firstname=form.firstname.data, lastname=form.lastname.data,
-                                username=username, self_renew=True, is_admin=True,
+                email = form.email.data
+                new_user = User(firstname=form.firstname.data, lastname=form.lastname.data,
+                                email=email, username=username, self_renew=True, is_admin=True,
                                 created_on=date.today(), is_active=True)
                 new_user.organization = new_organization
                 db.session.add(new_user)
+                
+                # we add the domain name of the 1st administrator
+                domain_name = email.split('@')[1]
+                domain = Domain(domain_name=domain_name, createdby=new_user)
+                db.session.add(domain)
+                
+                # we associate the domain name to administrator's organization
+                new_organization.domains = [domain]
 
                 # we create the attribute for the password
-                # ConfigManager.get returns the default since here this property has not been set yet in the db
-                hash_type = ConfigManager.get('hashing.algorithm')
+                # GlobalSettingsManager.get returns the default since here this property has not been set yet in the db
+                hash_type = GlobalSettingsManager.get('hashing.algorithm')
                 hash_ = make_hash(form.password1.data, hash_type)
                 radcheck_record = Radcheck(username=username, attribute=hash_type, op=':=', value=hash_)
                 db.session.add(radcheck_record)
 
                 # we create expire and disable groups
-                expire_group = Group(groupname=password_expired_groupname)
+                expire_group = Group(groupname=current_app.config['MFG_PASSWORD_EXPIRED_GROUPNAME'],
+                                     createdby=new_user)
                 db.session.add(expire_group)
 
-                disable_group = Group(groupname=account_disabled_groupname)
+                disable_group = Group(groupname=current_app.config['MFG_ACCOUNT_DISABLED_GROUPNAME'],
+                                      createdby=new_user)
                 db.session.add(disable_group)
 
                 expire_radgroupcheck = Radgroupcheck(groupname=expire_group.groupname, attribute='Auth-Type',
@@ -117,10 +133,14 @@ def index():
                 db.session.commit()
 
                 # set global configuration defaults (triggers SQLAlchemyError exception)
-                ConfigManager.set_default()
-
+                GlobalSettingsManager.set_default()
+                
+                # by default, we set the keyword 'smtp.email' with the domain name
+                # of the freshly created administrator
+                GlobalSettingsManager.set('smtp.email', domain_name)
+                
                 # set organization configuration defaults (triggers SQLAlchemyError exception)
-                OrganizationConfigManager(new_organization).set_default()
+                OrganizationSettingsManager(new_organization).set_default()
 
                 flash("The system has been setup, now you can login", 'success')
                 return redirect(url_for('auth.login'))
@@ -131,8 +151,17 @@ def index():
                 # TODO log the exception (to db ?, to file ?)
                 flash(str(e), 'danger')
 
-    return render_template('index.html', conf=ConfigManager, form=form)
+    return render_template('index.html', conf=GlobalSettingsManager, form=form)
 
+
+@main.route('/user/dashboard', methods=['GET', 'POST'])
+@is_authenticated
+def regular_dashboard():
+    """
+    This view allows the current regular user to see their information.
+    """
+    return render_template('regular_dashboard.html', conf=GlobalSettingsManager, current_user=current_user)
+    
 
 @main.route('/admin/dashboard', methods=['GET', 'POST'])
 @is_admin_or_contact_person
@@ -150,23 +179,23 @@ def privileged_dashboard():
     org_ids = [x.id for x in current_user.managed_organizations()]
 
     # we get the list of all the user belonging to the selected organizations
-    users = User.query.filter(User.organization_id.in_(org_ids)).all()
+    users = db.session.query(User).filter(User.organization_id.in_(org_ids)).all()
 
     # we start count how many users are...
     counters = {}
 
     # expired...
     counters['expired'] = User.query.with_entities(User.id).join(User.groups).filter(
-                            (Group.groupname == password_expired_groupname) &
+                            (Group.groupname == current_app.config['MFG_PASSWORD_EXPIRED_GROUPNAME']) &
                             (User.organization_id.in_(org_ids))).distinct().count()
     # disabled...
     counters['disabled'] = User.query.with_entities(User.id).join(User.groups).filter(
-                            (Group.groupname == account_disabled_groupname) &
+                            (Group.groupname == current_app.config['MFG_ACCOUNT_DISABLED_GROUPNAME']) &
                             (User.organization_id.in_(org_ids))).distinct().count()
 
     # we get the number of days before the account expiration.
     # During this time the account is considered as "expiring"
-    expires_in_days = ConfigManager.get('alert.when.password.expires.in.days')
+    expires_in_days = GlobalSettingsManager.get('alert.when.password.expires.in.days')
 
     expires_on = date.today() + timedelta(days=expires_in_days)
     counters['expiring'] = User.query.with_entities(User.id).filter(
@@ -174,80 +203,66 @@ def privileged_dashboard():
                             (User.organization_id.in_(org_ids))).distinct().count()
 
     # we count how many organizations we have
-    counters['organization'] = Organization.query.with_entities(Organization.id).count()
+    # ~ counters['organization'] = Organization.query.with_entities(Organization.id).count()
+    counters['organization'] = len(org_ids)
 
     # we count how many contact persons we have
     counters['contact_person'] = User.query.with_entities(User.id).filter(
                                     User.organizations.any(
                                         Organization.id.in_(org_ids))).distinct().count()
 
-    return render_template('privileged_dashboard.html', conf=ConfigManager, current_user=current_user, users=users, form=form,
-                        counters=counters)
-    
+    return render_template('privileged_dashboard.html', conf=GlobalSettingsManager, current_user=current_user,
+                           users=users, form=form, counters=counters)
 
-@main.route('/user/dashboard', methods=['GET', 'POST'])
-@is_authenticated
-def regular_dashboard():
+
+@main.route('/admin/random_password', methods=['GET'])
+def random_password():
     """
-    This view allows the current regular user to see their information.
+    an endpoint for creating a strong password starting from a dictionary file
     """
-    form = PasswordForm(request.form)
 
-    formName = UserPersonInfoForm(request.form)
-   
+    # we get the full path of the dictionary file
+    dict_path = os.path.join(current_app.root_path, "resources/lists/dict.txt")
 
-    #after changing password
-    if request.method == 'POST':
-        
-        if (not form.validate() and form.password1.data and form.password2.data):
-            flash_errors(form)
-            #TODO
-        
-        
-        elif form.password1.data and form.password2.data:
+    # if it does not exist, we abort
+    if not os.path.exists(dict_path):
+        abort(500)
 
-            try:
+    word1 = ""
+    word2 = ""
+    with open(dict_path, 'r') as fd:
+        # we get two random words from the dictionary file
+        words = [s.rstrip('\n') for s in fd.readlines()]
 
-                form.password1.validators = [MinMaxLengthAndEqualIfRequired(4, 64, 'registration_method', 'password_by_admin', equalto_field_name='password2')]
-                form.password2.validators = [MinMaxLengthAndEqualIfRequired(4, 64, 'registration_method', 'password_by_admin')]
-                
-                hash_type = ConfigManager.get('hashing.algorithm')
-                radcheck_record = db.session.query(Radcheck).filter((Radcheck.username == current_user.username) & (Radcheck.attribute == hash_type)).first()
-                radcheck_record.value = make_hash(form.password1.data, hash_type) 
-                
-                db.session.commit()
-                
-                flash("Password successfully changed!",'success')
-            
-            except SQLAlchemyError as e:
-                flash(str(e), 'danger')
-            
-           
-            formName.firstname.data = current_user.firstname
-            formName.lastname.data = current_user.lastname
+        # 1st word
+        while True:
+            word1 = random.choice(words)
+            if word1 != "":
+                break
 
-            return render_template('regular_dashboard.html', conf=ConfigManager, current_user=current_user, form=form, formName=formName)
-        
-        elif formName.firstname.data and formName.lastname.data:
-            #replace names
-            try:
-                
-                user = db.session.query(User).filter(( User.username == current_user.username) & (User.lastname == current_user.lastname)).first()
-                
-                user.firstname = formName.firstname.data
-                user.lastname = formName.lastname.data
-                
-                db.session.commit()
-                
-                flash(f"Name successfully changed!",'success')
-            
-            except SQLAlchemyError as e:
-                flash(str(e), 'danger')
+        # 2nd word
+        while True:
+            word2 = random.choice(words)
+            if word1 != word2 and word2 != "":
+                break
 
-            return render_template('regular_dashboard.html', conf=ConfigManager, current_user=current_user, form=form, formName=formName)
-           
+    if word1 == "" or word2 == "":
+        abort(500)
 
-    formName.firstname.data = current_user.firstname
-    formName.lastname.data = current_user.lastname
-    
-    return render_template('regular_dashboard.html',conf=ConfigManager, current_user=current_user, form=form, formName=formName)
+    # pseudo-randomly transform word case
+    transformed1 = ""
+    for w in word1:
+        transformed1 += w.lower() if random.randint(0, 1) else w.upper()
+
+    transformed2 = ""
+    for w in word2:
+        transformed2 += w.lower() if random.randint(0, 1) else w.upper()
+
+    # pseudo-randomly select a symbol
+    symbols = "!#$%,-.:;@^_"
+    symbol = random.choice(symbols)
+
+    # pseudo-random number
+    number = random.randint(0, 999)
+
+    return f"{transformed1}{symbol}{transformed2}{number}"

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#  helpers/config.py
+#  helpers/settings.py
 #
 # Copyright 2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -90,38 +91,48 @@ default_global_settings = {
     'application.shortname': {
         'value': 'MFG', 'coerce': str, 'desc': 'Allows you to customize the short-name of this MFG instance.'
     },
-    'smtp.hostname': {
-        'value': '', 'coerce': str,
-        'desc': (
-                  'Allows you to specify the IP address/domain name of the SMTP server '
-                  'to be used for sending emails to users.'
-                )
-    },
-    'smtp.port': {
-        'value': '25', 'coerce': int,
-        'desc': (
-                  'Allows you to specify the TCP port number of the SMTP server '
-                  'to be used for sending emails to users.'
-                )
-    },
-    'smtp.username': {
-        'value': '', 'coerce': str,
-        'desc': (
-                  'Allows you to specify the username to be used for logging in the SMTP server '
-                  'to be used for sending emails to users.'
-                )
-    },
-    'smtp.password': {
-        'value': '', 'coerce': str,
-        'desc': (
-                  'Allows you to specify the password to be used for logging in the SMTP server '
-                  'to be used for sending emails to users.'
-                )
-    },
+    # ~ 'smtp.hostname': {
+        # ~ 'value': '', 'coerce': str,
+        # ~ 'desc': (
+                  # ~ 'Allows you to specify the IP address/domain name of the SMTP server '
+                  # ~ 'to be used for sending emails to users.'
+                # ~ )
+    # ~ },
+    # ~ 'smtp.port': {
+        # ~ 'value': '467', 'coerce': int,
+        # ~ 'desc': (
+                  # ~ 'Allows you to specify the TCP port number of the SMTP server '
+                  # ~ 'to be used for sending emails to users.'
+                # ~ )
+    # ~ },
+    # ~ 'smtp.username': {
+        # ~ 'value': '', 'coerce': str,
+        # ~ 'desc': (
+                  # ~ 'Allows you to specify the username to be used for logging in the SMTP server '
+                  # ~ 'to be used for sending emails to users.'
+                # ~ )
+    # ~ },
+    # ~ 'smtp.password': {
+        # ~ 'value': '', 'coerce': str,
+        # ~ 'desc': (
+                  # ~ 'Allows you to specify the password to be used for logging in the SMTP server '
+                  # ~ 'to be used for sending emails to users.'
+                # ~ )
+    # ~ },
     'smtp.email': {
         'value': '', 'coerce': str,
-        'desc': 'Allows you to specify the email from which user alerts are sent.'
+        'desc': ( 'Allows you to specify the email address from which user alerts are sent or '
+                  'a domain name that is used to build a "no-reply" email address from which user alerts are sent.'
+                )
     },
+    # ~ 'smtp.ssl': {
+        # ~ 'value': 'true', 'coerce': bool,
+        # ~ 'desc': 'Allows you to specify if SSL can be used when sending emails.'
+    # ~ },
+    # ~ 'smtp.tls': {
+        # ~ 'value': 'false', 'coerce': bool,
+        # ~ 'desc': 'Allows you to specify if TLS can be used when sending emails.'
+    # ~ },
 }
 
 
@@ -139,19 +150,19 @@ default_organization_settings = {
     },
     'password.expired.after.days': {
         'value': '180', 'coerce': int,
-        'desc': 'The number of days before a password is considered expired.'
+        'desc': 'The default number of days before a password is considered expired for this organization.'
     },
     'account.disabled.after.months': {
         'value': '36', 'coerce': int,
-        'desc': 'The number of months before an account is automatically disabled.'
+        'desc': 'The default number of months before an account is automatically disabled for this organization.'
     },
     'token.expired.after.hours': {
         'value': '6', 'coerce': int,
-        'desc': 'The number of hours before a password recovery token is considered expired.'
+        'desc': 'The default number of hours before a password recovery token is considered expired for this organization.'
     },
     'signup.token.expired.after.hours': {
         'value': '12', 'coerce': int,
-        'desc': 'The number of hours before a self-registration token is considered expired.'
+        'desc': 'The default number of hours before a self-registration token is considered expired for this organization.'
     },
     'items.per.page': {
         'value': '50', 'coerce': int,
@@ -176,7 +187,37 @@ class OrganizationNotFound(Exception):
     pass
 
 
-class OrganizationConfigManager:
+class OrganizationsSettingsManager:
+    @staticmethod
+    def get(organization_id_list, property_name, return_default_if_not_found=True):
+        if property_name not in default_organization_settings.keys():
+            raise ConfigPropertyNotAllowed
+
+        
+        values = db.session.query(OrganizationSettings).with_entities(OrganizationSettings.value).filter(
+            (OrganizationSettings.keyword == property_name) &
+            (OrganizationSettings.organization_id.in_(organization_id_list))).all()
+        
+        default_prop = default_organization_settings[property_name]
+        cast = default_prop["coerce"]
+
+        result = []
+        for value in values:
+            try:
+                value = cast(value)
+            except ValueError:
+                if return_default_if_not_found:
+                    value = cast(default_prop["value"])
+                else:
+                    raise ConfigPropertyNotFound
+                    return
+
+            result.append(value)
+
+        return result
+    
+
+class OrganizationSettingsManager:
     """
     Class for managing per-organization settings
     """
@@ -189,7 +230,8 @@ class OrganizationConfigManager:
         this method populates the db with the default settings for a specific organization.
         """
 
-        db.session.query(OrganizationSettings).delete()
+        db.session.query(OrganizationSettings).filter(
+            OrganizationSettings.organization_id == self.organization.id).delete()
 
         for k, d in default_organization_settings.items():
             v = d["coerce"](d["value"])
@@ -199,6 +241,30 @@ class OrganizationConfigManager:
 
         db.session.commit()
 
+
+    def set(self, property_name, property_value):
+        """
+        this method allows to specify the value for a single setting property.
+        """
+        if property_name not in default_organization_settings.keys():
+            raise ConfigPropertyNotAllowed
+        
+        property_obj = db.session.query(OrganizationSettings).filter(
+                                       (OrganizationSettings.keyword == property_name) &
+                                       (OrganizationSettings.organization_id == self.organization.id)).first()
+        if not property_obj:
+            raise ConfigPropertyNotFound
+        
+        default_prop = default_organization_settings[property_name]
+        cast = default_prop["coerce"]
+        # if we cannot cast it, we raise ValueError
+        value = cast(property_value)
+
+        # but still we save the value as a string
+        property_obj.value = str(value)
+        db.session.commit()
+
+
     def get(self, property_name, return_default_if_not_found=True):
         """
         this method retrieves settings value from the db for a specific organization.
@@ -206,13 +272,13 @@ class OrganizationConfigManager:
         otherwise it raises a ConfigPropertyNotFound exception
         """
 
-        if property_name not in default_global_settings.keys():
+        if property_name not in default_organization_settings.keys():
             raise ConfigPropertyNotAllowed
 
         property_obj = db.session.query(OrganizationSettings).filter(
                            (OrganizationSettings.organization == self.organization) &
                            (OrganizationSettings.keyword == property_name)).first()
-        default_prop = default_global_settings[property_name]
+        default_prop = default_organization_settings[property_name]
         cast = default_prop["coerce"]
         if not property_obj:
             if return_default_if_not_found:
@@ -223,7 +289,7 @@ class OrganizationConfigManager:
         return cast(property_obj.value)
 
 
-class ConfigManager:
+class GlobalSettingsManager:
 
     @staticmethod
     def set_default():
@@ -239,6 +305,28 @@ class ConfigManager:
             db.session.add(new_setting)
 
         db.session.commit()
+
+    @staticmethod
+    def set(property_name, property_value):
+        """
+        this method allows to specify the value for a single setting property.
+        """
+        if property_name not in default_global_settings.keys():
+            raise ConfigPropertyNotAllowed
+        
+        property_obj = db.session.query(GlobalSettings).filter(GlobalSettings.keyword == property_name).first()
+        if not property_obj:
+            raise ConfigPropertyNotFound
+        
+        default_prop = default_global_settings[property_name]
+        cast = default_prop["coerce"]
+        # if we cannot cast it, we raise ValueError
+        value = cast(property_value)
+
+        # but still we save the value as a string
+        property_obj.value = str(value)
+        db.session.commit()
+        
 
     @staticmethod
     def get(property_name, return_default_if_not_found=True):

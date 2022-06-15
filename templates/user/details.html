@@ -1,184 +1,335 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}User details{% endblock %}
 
+{% from "structural/macros.html" import render_inputfield, start_info_card, end_info_card, uid_form %}
+
+{% if current_user.is_admin_or_contact_person() %}
+{% block extraheader %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
+{% endif %}
+
 {% block content %}
-<div class="column is-12">
-    <h3 class="title">{{ self.title() }}</h3>
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi-grid-3x2-gap me-2"></i>Account details</h2>
+  
+  <div class="row">
 
-    <div class="tile is-ancestor has-text-centered">
-        <div class="tile is-parent">
-            <article class="tile is-child box">
-                <p class="title">Username</p>
-                <p class="subtitle">{{ user.username }}</p>
-            </article>
-        </div>
-        <div class="tile is-parent">
-            <article class="tile is-child box">
-                <p class="title">Email</p>
-                <p class="subtitle">{{ user.email }}</p>
-            </article>
-        </div>
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="box">
-            {% for category, message in messages %}
-            <div class="notification is-{{ category }}" role="alert">{{ message }}</div>
-            {% endfor %}
-        </div>
-        {% endif %}
-    {% endwith %}
-    
-    <h4 class="title is-4">Other details</h4>
-    <div class="box">
-        
-        {% if current_user.id != user.id and request.path.startswith("/admin") %}
-        <div class="dropdown is-right is-pulled-right">
-            <div class="dropdown-trigger">
-                <button id="dropdown-button" class="button" aria-haspopup="true" aria-controls="dropdown-menu">
-                    <span class="icon is-small">
-                        <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
-                    </span>
-                </button>
-            </div>
-            <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                <div class="dropdown-content" style="min-width:200px">
-                
-                
-                {% if current_user.is_admin_or_contact_person() %}
-                    <a href="#" class="button is-white dropdown-item">
-                        <span class="icon-text">
-                            <span class="icon"><i class="fas fa-edit"></i></span>
-                            <span>Edit details</span>
-                        </span>
-                    </a>
-                {% endif %}
-                
-                {% if not user.is_admin %}
-                    <a href="{{ url_for('contact_person.associate_organizations', uid=user.id) }}" class="button is-white dropdown-item">
-                        <span class="icon-text">
-                            <span class="icon"><i class="fas fa-user-shield"></i></span>
-                            <span>{% if user.is_contact_person() %}Manage contact person{% else %}Promote to contact person{% endif %}</span>
-                        </span>
-                    </a>
-                {% endif %}
-                
-                <button id="toggle-admin" class="button is-danger is-light dropdown-item" data-uid="{{ user.id }}">
-                    <span class="icon">
-                        <i class="fas fa-user-cog"></i>
-                    </span>
-                    <span>{% if user.is_admin %}Remove administrator privileges{% else %}Give administrator privileges{% endif %}</span>
-                </button>
-                <hr class="dropdown-divider">
-                
-                <a href="{{ url_for('radius.radcheck', uid=user.id) }}" class="button is-white dropdown-item">
-                    <div class="icon-text">
-                        <div class="icon"><i class="fas fa-tasks"></i></div>
-                        <div>Check attributes</div>
-                    </div>
-                </a>
-                <a href="{{ url_for('radius.radreply', uid=user.id) }}" class="button is-white dropdown-item">
-                    <div class="icon-text">
-                        <div class="icon"><i class="fas fa-tasks"></i></div>
-                        <div>Reply attributes</div>
-                    </div>
-                </a>
-
-                <hr class="dropdown-divider">
-                
-                <button class="button is-white dropdown-item" data-uid="{{ user.id }}">
-                    <span class="icon">
-                        <i class="fas fa-key"></i>
-                    </span>
-                    <span>Reset password (generate token)</span>
-                </button>
-                
-                <a class="button is-white dropdown-item">
-                    <span class="icon-text">
-                        <span class="icon"><i class="fas fa-user-lock"></i></span>
-                        <span>Change password (admin)</span>
-                    </span>
-                </a>                    
-            </div>
-        </div>
-    </div>
+    {% if current_user.id == user.id %}
+      {% set title = "Your username" %}
+    {% else %}
+      {% set title = "Username" %}
     {% endif %}
+    {{ start_info_card('person-fill', title, user.username) }}
+    {{ end_info_card() }}
+
+
+    {% if current_user.id == user.id %}
+      {% set title = "Your name" %}
+    {% else %}
+      {% set title = "User's fullname" %}
+    {% endif %}
+    
+    {{ start_info_card('person-circle', title, user.fullname()) }}
+      
+        {% if personinfo_form and current_user.is_admin_or_contact_person() %}
+        <div class="flex-row d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse"
+            data-bs-target="#fullname-change" aria-expanded="false" aria-controls="fullname-change">Change</button>
+        </div>
+      
+        <div id="fullname-change" class="collapse p-1">
+          <form class="flex-column d-flex flex-fill justify-content-center" method="POST" action="{{ url_for('user.change_personinfo', uid=user.id) }}">
+            {{ personinfo_form.csrf_token }}
+            <div class="form-floating mb-1">
+              {{ personinfo_form.firstname }}
+              <label for="{{ personinfo_form.firstname.id }}">{{ personinfo_form.firstname.label.text }}</label>
+            </div>
+            <div class="form-floating mb-1">
+              {{ personinfo_form.lastname }}
+              <label for="{{ personinfo_form.lastname.id }}">{{ personinfo_form.lastname.label.text }}</label>
+            </div>
         
-    <h6 class="title is-6 mb-3">Personal information</h6>
-    <ul>
-        <li><strong>Name</strong>: {{ user.fullname() }}</li>
-        <li><strong>Organization</strong>: {% if user.organization %}{{ user.organization.name() }}{% else %} - {% endif %}</li>
-        
-        {% if user.is_admin_or_contact_person() %}
-        <li><strong>Role</strong>:
-            {% if user.is_admin %}{{ user.fullname() }} is a system <strong>administrator</strong>
-            {% else %}{{ user.fullname() }} is a <strong>contact person</strong> for:
-                {% for o in user.organizations %}
-                    <strong>{{ o.shortname }}</strong>{% if not loop.last %}, {% endif %}
-                {% endfor %}
-            {% endif %}
-        </li>
+            <div class="d-grid">
+              <button type="submit" class="d-grid btn btn-primary">Submit</button>
+            </div>
+          </form>
+        </div><!-- /#fullname-change -->
         {% endif %}
-    </ul>
+      
+    {{ end_info_card() }}
 
-        <hr class="my-3">
+
+    {% if current_user.id == user.id %}
+      {% set title = "Your email" %}
+    {% else %}
+      {% set title = "Email" %}
+    {% endif %}
+
+    {{ start_info_card('envelope-open-fill', title, user.email) }}
+
+        {% if email_form and current_user.is_admin_or_contact_person() %}
+        <div class="flex-row d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse"
+            data-bs-target="#email-change" aria-expanded="false" aria-controls="email-change">Change</button>
+        </div>
         
-        <h6 class="title is-6 mb-3">Account information</h6>
-        <ul>
-            <li>This account has been created on <strong>{{ user.created_on.strftime('%b %d, %Y') }}</strong> {% if user.creator %} by <strong>{{ user.creator.fullname() }}</strong>{% endif %}</li>
-            <li>{% if user.is_disabled() %}
-            The account is disabled
-        {% else %}
-            {% if user.disable_on %}The account will be automatically disabled on <strong>{{ user.disable_on.strftime('%b %d, %Y') }}</strong>
-            {% else %}The account will <strong>not</strong> be automatically disabled{% endif %}
-        {% endif %}</li>
+        <div id="email-change" class="collapse p-1">
+          <form class="flex-column d-flex flex-fill justify-content-center" method="POST" action="{{ url_for('user.change_email', uid=user.id) }}">
+          {{ email_form.csrf_token }}
+          <div class="form-floating mb-1">
+            {{ email_form.field }}
+            <label for="{{ email_form.field.id }}">{{ email_form.field.label.text }}</label>
+          </div>
+
+          <div class="d-grid">
+            <button id="btn-email-change" type="submit" class="d-grid btn btn-primary">Submit</button>
+          </div>
+        </form>
+        </div><!-- /#email-change -->
+        {% endif %}
         
-        <li>
-        {% if user.is_expired() %}
-            The password has expired {% if user.expires_on %}on <strong>{{ user.expires_on.strftime('%b %d, %Y') }}</strong>{% endif %}
-        {% else %}
-            {% if user.expires_on %}
-                The password expires on <strong>{{ user.expires_on.strftime('%b %d, %Y') }}</strong> and can{% if not user.self_renew %}not{% endif %} be self-renewed
+    {{ end_info_card() }}
+
+
+    {% if current_user.id == user.id %}
+      {% set title = "Your organization" %}
+    {% else %}
+      {% set title = "Organization" %}
+    {% endif %}
+    
+    {{ start_info_card('building', title, user.organization.fullname) }}
+    
+        {% if organization_form and current_user.is_admin_or_contact_person() %}
+        <div class="flex-row d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse"
+            data-bs-target="#organization-change" aria-expanded="false" aria-controls="organization-change">Change</button>
+        </div>
+        
+        <div id="organization-change" class="collapse p-1">
+          <form class="flex-column d-flex flex-fill justify-content-center" method="POST" action="{{ url_for('user.change_organization', uid=user.id) }}">
+            {{ organization_form.csrf_token }}
+            {{ render_inputfield(organization_form.organization) }}
+        
+            <div class="d-grid mt-2">
+              <button type="submit" class="d-grid btn btn-primary">Submit</button>
+            </div>
+          </form>
+        </div><!-- /#organization-change -->
+        {% endif %}
+        
+    {{ end_info_card() }}
+
+
+    {% if current_user.is_admin_or_contact_person() %}
+    <div class="col-12 col-md-6 p-1">
+      <div class="flex-column d-flex flex-fill card p-2">
+          
+        <div class="flex-row d-flex align-items-center align-self-center px-1">
+          <i class="bi bi-file-earmark-person icon-2em me-3"></i>
+          <div class="align-self-center py-1">
+            <h4 class="fw-bold mb-0">{% if current_user.id == user.id %}Your role{% else %}User's role{% endif %}</h4>
+            <p class="mb-0">
+            {% if user.is_admin %}
+              {% if current_user.id == user.id %}You are{% else %}{{ user.fullname() }} is{% endif %} a system <strong>administrator</strong>
+            {% elif user.is_contact_person() %}{% if current_user.id == user.id %}You are{% else %}{{ user.fullname() }} is{% endif %} a <strong>contact person</strong> for:
+              {% for o in user.organizations %}
+              <strong>{{ o.shortname }}</strong>{% if not loop.last %}, {% endif %}
+              {% endfor %}
             {% else %}
-                Password does <strong>not</strong> expire
+              {{ user.fullname() }} is a <strong>regular user</strong>
             {% endif %}
-        {% endif %}</li>
-        </ul>
-    </div>
-</div>
+            </p>
+          </div>
+        </div><!-- /.flex-row d-flex align-items-center align-self-center px-1 -->
+        
+        {% if current_user.is_admin and current_user.id != user.id %}
+        <div class="flex-row d-flex justify-content-end">
+          {% if not user.is_admin %}
+          <a href="{{ url_for('contact_person.associate_organizations', uid=user.id) }}" class="btn btn-outline-secondary btn-sm me-1">
+            Manage <abbr title="Contact Person">CP</abbr>
+          </a>
+          {% endif %}
+          {% if user.is_admin %}
+            {% set class_ = "btn-outline-secondary" %}
+          {% else %}
+            {% set class_ = "btn-outline-danger" %}
+          {% endif %}
+          <button id="btn-admin-toggle" type="button" class="btn {{ class_ }} btn-sm">Toggle admin status</button>
+        </div>
+        {% endif %}
+        
+      </div><!-- /.flex-column d-flex flex-fill card p-2 -->
+    </div><!-- /.col-12 col-md-6 p-1 -->
+    {% endif %}
 
-{% if form %}
-<form style="display: none;" id="toggle-admin-form" method="POST" action="{{ url_for('user.toggle_admin') }}">
-    {{ form.csrf_token }}
-    {{ form.uid }}
-</form>
+  {% if current_user.is_admin_or_contact_person() and request.path.startswith("/admin") %}
+
+    {{ start_info_card('table', 'RADIUS attributes', 'Manage RADIUS attributes for this user') }}
+        <div class="flex-row d-flex justify-content-end">
+          <a href="{{ url_for('radius.radcheck', uid=user.id) }}" class="btn btn-outline-secondary btn-sm me-1">Check</a>
+          <a href="{{ url_for('radius.radreply', uid=user.id) }}" class="btn btn-secondary btn-sm me-1">Reply</a>
+        </div>        
+    {{ end_info_card() }}
+
+  {% endif %}
+  
+    <div class="col-12 col-md-6 p-1">
+      <div class="flex-column d-flex flex-fill card p-2">
+          
+        <div class="flex-row d-flex align-items-center align-self-center px-1">
+          <i class="bi bi-info-circle-fill icon-2em me-3"></i>
+          <div class="align-self-center py-1">
+            <h4 class="fw-bold mb-0">Account status</h4>
+            <p class="mb-0">
+            {% if user.in_disabled_group() %}
+              This account is disabled<br>
+            {% else %}
+              This account is enabled<br>
+              {% if user.disable_on %}
+              This account autodisables on <strong>{{ user.disable_on }}</strong>
+              {% else %}
+              This account does not autodisable
+              {% endif %}<br>
+            {% endif %}
+            </p>
+          </div>
+        </div><!-- /.flex-row d-flex align-items-center align-self-center px-1 -->
+        
+        {% if current_user.is_admin and current_user.id != user.id %}
+        <div class="flex-row d-flex justify-content-end">
+          {% if user.in_disabled_group() %}
+            {% set label_ = "Enable" %}
+            {% set class_ = "btn-outline-success" %}
+          {% else %}
+            {% set label_ = "Disable" %}
+            {% set class_ = "btn-outline-danger" %}
+          {% endif %}
+          <button id="btn-account-status-toggle" type="button" class="btn {{ class_ }} btn-sm">{{ label_ }}</button>
+        </div>
+        {% endif %}
+
+      </div><!-- /.flex-column d-flex flex-fill card p-2 -->
+    </div><!-- /.col-12 col-md-6 p-1 -->
+
+
+    {% if current_user.id == user.id %}
+      {% set title = "Your password" %}
+    {% else %}
+      {% set title = "User's password" %}
+    {% endif %}
+    <div class="col-12 col-md-6 p-1">
+      <div class="flex-column d-flex flex-fill card p-2">
+
+        <div class="flex-row d-flex align-items-center align-self-center px-1">
+          <i class="bi bi-key-fill icon-2em me-3"></i>
+          <div class="align-self-center py-1">
+            <h4 class="fw-bold mb-0">{{ title }}</h4>
+            <p class="mb-0">
+              
+            </p>
+          </div>
+        </div><!-- /.flex-row d-flex align-items-center align-self-center px-1 -->
+      
+        {% if password_form and current_user.is_admin_or_contact_person() %}
+        <div class="flex-row d-flex justify-content-end">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse"
+            data-bs-target="#password-change" aria-expanded="false" aria-controls="password-change">Change</button>
+        </div>
+      
+        <div id="password-change" class="collapse p-1">
+          <form class="flex-column d-flex flex-fill justify-content-center" method="POST" action="{{ url_for('user.admin_change_password', uid=user.id) }}">
+            {{ password_form.csrf_token }}
+
+            <div class="mb-2">
+              <label for="{{ password_form.password1.id }}" class="form-label">{{ password_form.password1.label.text }}</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                {{ password_form.password1 }}
+                <button id="btn-random-password" type="button" class="input-group-text" title="Generate random password">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+                <button id="btn-show-hide-password" type="button" class="input-group-text" title="Show/Hide">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="mb-2">
+              {{ render_inputfield(password_form.password2, 'lock-fill') }}
+            </div>
+        
+            <div class="d-grid">
+              <button type="submit" class="d-grid btn btn-primary">Submit</button>
+            </div>
+          </form>
+        </div><!-- /#fullname-change -->
+        {% else %}
+          <div class="flex-row d-flex justify-content-end">
+            <a href="{{ url_for('user.change_password', uid=user.id) }}" class="btn btn-outline-secondary btn-sm me-1">
+              Change
+            </a>
+          </div>
+        {% endif %}
+      
+    {{ end_info_card() }}
+
+
+  </div><!-- /.row -->
+
+</div><!-- /.container px-4 pt-5 -->
+
+{% if admin_toggle_form %}
+  {{ uid_form('form-admin-toggle', url_for('user.toggle_admin'), admin_toggle_form) }}
+{% endif %}
+
+{% if account_status_toggle_form %}
+  {{ uid_form('form-account-status-toggle', url_for('user.toggle_account_status'), account_status_toggle_form) }}
 {% endif %}
 
 <script>
 
-document.addEventListener('DOMContentLoaded', function() {
-    {% if current_user.id != user.id %}
-    var form_obj = document.getElementById('toggle-admin-form');
-    var uid_obj = document.getElementById('uid');
-    
-	var adminToggler = document.getElementById('toggle-admin');
-    adminToggler.addEventListener('click', function(e){
-        uid_obj.value = this.getAttribute('data-uid');
-        var should_toggle = confirm('Are you sure?');
-        if (should_toggle) {
-            form_obj.submit();
-        }
-    });
-    {% endif %}
-    
-    var button = document.getElementById('dropdown-button'),
-        dropdown = document.getElementsByClassName('dropdown');
-
-    button.addEventListener('click', function(e){
-        dropdown[0].classList.toggle('is-active');
-    });
+$(document).ready(function(){
+  {% if email_form %}
+  var buttonEmailChangeElement = $('#btn-email-change');
+  
+  // ~ init email submit button
+  buttonEmailChangeElement.prop("disabled", true);
+  
+  // ~ disable email submit button when input is equal to the current email address
+  $('#{{ email_form.field.id }}').on('input', function() {
+    buttonEmailChangeElement.prop("disabled", ($(this).val() == '{{ user.email }}'));
+  });
+  {% endif %}
+  
+  {% if admin_toggle_form %}
+  $('#btn-admin-toggle').click(function(){
+    var message = "{{ user.fullname() }} will be{% if user.is_admin %} no longer{% endif %} an administrator. Do you want to continue?";
+    if (confirm(message)) {
+      $('#form-admin-toggle').submit();
+    }
+  });
+  {% endif %}
+  
+  {% if account_status_toggle_form %}
+  $('#btn-account-status-toggle').click(function(){
+    var message = "{{ user.fullname() }}'s account will be {% if current_user.in_disabled_group() %}enabled{% else %}disabled{% endif %}. Do you want to continue?";
+    if (confirm(message)) {
+      $('#form-account-status-toggle').submit();
+    }
+  });
+  {% endif %}
+  
+  {% if password_form %}
+    generatePasswordTogglerAndShuffler(
+      '#{{ password_form.password1.id }}',
+      '#{{ password_form.password2.id }}',
+      '#btn-show-hide-password',
+      '#btn-random-password',
+      '{{ url_for("main.random_password") }}'
+    );
+  {% endif %}
 });
 
 </script>

@@ -1,124 +1,111 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Search user by username{% endblock %}
 
+{% block extraheader %}
+{% include "structural/header/tables.html" %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
+
+{% from "structural/macros.html" import manage_datatable %}
+
 {% block content %}
-
-{% from "macros.html" import render_inputfield, render_checkbox %}
-
-<div class="column is-12">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="card">
-        <header class="card-header">
-            <p class="card-header-title">Search filters</p>
-            <button class="card-header-icon card-toggle" aria-label="more options">
-                <span class="icon">
-                    <i class="fas fa-angle-down" aria-hidden="true"></i>
-                </span>
-            </button>
-        </header>
-        <div class="card-content{% if users %} is-hidden{% endif %}">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <form method="POST" action="{{ url_for('user.search') }}">
-                {{ form.csrf_token }}
-                {{ render_inputfield(form.username, 'search') }}
-                
-                <button class="button is-block is-info is-fullwidth">Search</button>
-            </form>
-        </div>
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-search me-2"></i>{{ self.title() }}</h2>
+  
+  <form class="d-flex flex-row" method="POST" action="{{ url_for('user.search') }}">
+    {{ form.csrf_token }}
+    
+    <div class="p-2 flex-grow-1">
+      <label for="{{ form.username.id }}" class="form-label">{{ form.username.label.text }}</label>
+      <div class="input-group input-group-{% if users %}sm{% else %}lg{% endif %}">
+        <span class="input-group-text"><i class="bi-search"></i></span>
+        {{ form.username }}
+      </div>
     </div>
     
-    {% if request.method == 'POST' %}
-    <div class="box">
-        
-        {% if users %}
-        <table class="table is-fullwidth is-striped is-size-7">
-            <thead>
-                <tr>    
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Organization</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            
-            {% for u in users %}
-                <tr>
-                    <td class="is-vcentered">{{ u.fullname() }}</td>
-                    <td class="is-vcentered">{{ u.username }}</td>
-                    <td class="is-vcentered">{% if u.organization %}{{ u.organization.shortname }}{% else %}-{% endif %}</td>
-                    <td class="is-vcentered">{% if u.is_disabled() %}
-                            The account is disabled<br>
-                        {% else %}
-                            {% if u.disable_on %}Autodisables on {{ u.disable_on }}{% else %}Account does not autodisable{% endif %}<br>
-                        {% endif %}
-                        {% if u.is_expired() %}
-                            The password has expired
-                        {% else %}
-                            {% if u.expires_on %}
-                                Password expires on {{ u.expires_on }}<br>Password is {% if not u.self_renew %}not {% endif %}self-renewable
-                            {% else %}
-                                Password does not expire
-                            {% endif %}
-                        {% endif %}
-                        </td>
-                    <td class="is-vcentered">
-                        <div class="buttons">
-                            <a class="button is-light" href="{{ url_for('contact_person.associate_organizations', uid=u.id) }}" title="Contact person details">
-                                <span class="icon is-small">
-                                    <i class="fas fa-address-card{% if u.is_contact_person() %} has-text-success-dark{% else %} has-text-danger-dark{% endif %}"></i>
-                                </span>
-                            </a>
-                            <a class="button is-light" href="{{ url_for('user.details', uid=u.id) }}" title="User details">
-                                <span class="icon is-small">
-                                    <i class="fas fa-info"></i>
-                                </span>
-                            </a>
-                            <button class="button is-light" onclick="set_and_submit({{ u.id }})" title="Delete this user">
-                                <span class="icon is-small">
-                                    <i class="fas fa-trash"></i>
-                                </span>
-                            </button>
-                            
-                        </div>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-            <p>Selected filters did not produce any result.</p>
-        {% endif %}
+    <div class="p-2 align-self-end">
+      <button type="submit" class="btn btn-primary btn-{% if users %}sm{% else %}lg{% endif %}">Search</button>
     </div>
-    {% endif %}
+  </form>
 </div>
 
-{% if form %}
-<form style="display: none;" id="delete-form" method="POST" action="{{ url_for('user.delete') }}">
-    {{ form.csrf_token }}
-    {{ form.uid }}
-</form>
+{% if request.method == 'POST' %}
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-search me-2"></i> Search results</h2>  
+
+  {% if users %}
+  <table id="user-list" class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Username</th>
+        <th scope="col">Organization</th>
+        <th scope="col">Status</th>
+        <th scope="col" class="non-sortable">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for u in users %}
+      <tr class="align-middle">
+        <td>{{ u.fullname() }}</td>
+        <td>{{ u.username }}</td>
+        <td>{% if u.organization %}{{ u.organization.shortname }}{% else %}-{% endif %}</td>
+        <td>
+        {% if u.in_disabled_group() %}
+          The account is disabled<br>
+        {% else %}
+          {% if u.disable_on %}Autodisables on {{ u.disable_on }}{% else %}Account does not autodisable{% endif %}<br>
+        {% endif %}
+        
+        {% if u.is_expired() %}
+          The password has expired
+        {% else %}
+          {% if u.expires_on %}
+            Password expires on {{ u.expires_on }}<br>Password is {% if not u.self_renew %}not {% endif %}self-renewable
+          {% else %}
+            Password does not expire
+          {% endif %}
+        {% endif %}
+        </td>
+        <td class="text-end">
+          <div class="btn-group">
+            {% if not u.is_admin %}
+            <a class="btn btn-outline-secondary" href="{{ url_for('contact_person.associate_organizations', uid=u.id) }}" title="Contact person details">
+              <i class="bi bi-person-badge text-{% if u.is_contact_person() %}success{% else %}danger{% endif %}"></i>
+            </a>
+            {% endif %}
+            <a class="btn btn-outline-secondary" href="{{ url_for('user.details', uid=u.id) }}" title="User details">
+              <i class="bi bi-info-square-fill"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="fs-5">Selected filters did not produce any result.</p>
+  {% endif %}
+</div>
 {% endif %}
 
+{% if users %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-	var cardToggles = document.getElementsByClassName('card-toggle');
-	for (var i = 0; i < cardToggles.length; i++) {
-		cardToggles[i].addEventListener('click', function(e){
-            var card = e.currentTarget.parentElement.parentElement;
-            card.getElementsByClassName('card-content')[0].classList.toggle('is-hidden');
-		});
-	}
-});
+  $(document).ready(function() {
+    // ~ setup a simple datatable
+    $('#user-list').DataTable({
+    "paging": true,
+    "info": true,
+    "ordering": true,
+    columnDefs: [{
+      orderable: false,
+      targets: "non-sortable"
+    }]
+  });
+  });
 </script>
+{% endif %}
 
 {% endblock %}

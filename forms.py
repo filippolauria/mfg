@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -41,11 +42,12 @@ from mfg.helpers.widgets import DateInput
 
 class SingleEmailForm(FlaskForm):
     email = StringField('Email', [Length(min=4, max=64), Email(), InputRequired()],
-                        render_kw={'class': 'input', 'placeholder': 'Email'}, widget=EmailInput())
+                        render_kw={'class': 'form-control', 'placeholder': 'Email'}, widget=EmailInput())
 
 
 class MultipleSelectForm(FlaskForm):
-    field = SelectMultipleField('Select multiple values', coerce=int, choices=[])
+    field = SelectMultipleField('Select multiple values', coerce=int, choices=[],
+                                render_kw={'class': 'form-select'})
 
 
 class UidForm(FlaskForm):
@@ -53,25 +55,25 @@ class UidForm(FlaskForm):
 
 
 class LoginForm(FlaskForm):
-    username = StringField('Username', [Length(min=4, max=64)], render_kw={'class': 'input is-large',
+    username = StringField('Username', [Length(min=4, max=64)], render_kw={'class': 'form-control',
                                                                            'placeholder': 'Username'})
-    password = PasswordField('Password', [Length(min=4, max=64)], render_kw={'class': 'input is-large',
+    password = PasswordField('Password', [Length(min=4, max=64)], render_kw={'class': 'form-control',
                                                                              'placeholder': 'Password'})
     remember = BooleanField('Remember me')
 
 
 field_args = {
     'shortname': {
-        'validators': [Length(min=2, max=64)], 'render_kw': {'class': 'input',
+        'validators': [Length(min=2, max=64)], 'render_kw': {'class': 'form-control',
                                                              'placeholder': 'Organization Short Name'}
     },
     'fullname': {
-        'validators': [Length(min=4, max=253)], 'render_kw': {'class': 'input',
+        'validators': [Length(min=4, max=253)], 'render_kw': {'class': 'form-control',
                                                               'placeholder': 'Organization Name'}
     }
 }
-OrganizationForm = model_form(Organization, base_class=FlaskForm, db_session=db.session,
-                              field_args=field_args, exclude=['users'])
+CreateOrganizationForm = model_form(Organization, base_class=FlaskForm, db_session=db.session,
+                                    field_args=field_args, exclude=['users'])
 
 
 domain_name_pattern = '^([a-zA-Z0-9._-])+$'
@@ -79,7 +81,7 @@ domain_name_message = 'only upper and lower case letters, numbers and . _ - are 
 field_args = {
     'domain_name': {
         'validators': [Length(min=4, max=253), Regexp(domain_name_pattern, message=domain_name_message)],
-        'render_kw': {'class': 'input', 'placeholder': 'Domain name', 'pattern': domain_name_pattern,
+        'render_kw': {'class': 'form-control', 'placeholder': 'Domain name', 'pattern': domain_name_pattern,
                       'title': domain_name_message}
     },
 }
@@ -89,45 +91,50 @@ DomainForm = model_form(Domain, base_class=FlaskForm, db_session=db.session, fie
 class PasswordForm(FlaskForm):
     password1 = PasswordField('Password', [Length(min=4, max=64),
                                            EqualTo('password2', message='Passwords must match')],
-                              render_kw={'class': 'input', 'placeholder': 'Password'})
+                              render_kw={'class': 'form-control', 'placeholder': 'Password'})
     password2 = PasswordField('Repeat Password', [Length(min=4, max=64)],
-                              render_kw={'class': 'input', 'placeholder': 'Repeat Password'})
+                              render_kw={'class': 'form-control', 'placeholder': 'Repeat Password'})
 
 
 class ChangePasswordForm(PasswordForm):
     current_password = PasswordField('Current Password', [InputRequired(), Length(min=4, max=64)],
-                                     render_kw={'class': 'input', 'placeholder': 'Current Password'})
+                                     render_kw={'class': 'form-control', 'placeholder': 'Current Password'})
+
 
 class UserPersonInfoForm(FlaskForm):
     firstname = StringField('First Name', [Length(min=4, max=64), InputRequired()],
-                            render_kw={'class': 'input', 'placeholder': 'First Name'})
+                            render_kw={'class': 'form-control', 'placeholder': 'First Name'})
     lastname = StringField('Last Name', [Length(min=4, max=64), InputRequired()],
-                           render_kw={'class': 'input', 'placeholder': 'Last Name'})
+                           render_kw={'class': 'form-control', 'placeholder': 'Last Name'})
 
 
 class AutoSignupForm(UserPersonInfoForm, PasswordForm):
     pass
 
 
-class AutoSignupWithOrganizationSelectionFrom(AutoSignupForm):
-    organization = SelectField('Organization', [InputRequired()])
+class SelectOrganizationForm(FlaskForm):
+    organization = SelectField('Organization', [InputRequired()], render_kw={'class': 'form-select'})
 
 
-class FirstAccessForm(UserPersonInfoForm, PasswordForm, OrganizationForm):
+class AutoSignupWithOrganizationSelectionForm(AutoSignupForm, SelectOrganizationForm):
+    pass
+
+
+class FirstAccessForm(UserPersonInfoForm, PasswordForm, CreateOrganizationForm):
     email = StringField('Email', [Length(min=4, max=64), Email(), InputRequired(), EmailAlreadyUsed()],
-                        render_kw={'class': 'input', 'placeholder': 'Email'}, widget=EmailInput())
+                        render_kw={'class': 'form-control', 'placeholder': 'Email'}, widget=EmailInput())
     username = StringField('Username', [Length(min=4, max=64), InputRequired(), UserAlreadyExists()],
-                           render_kw={'class': 'input', 'placeholder': 'Username'})
+                           render_kw={'class': 'form-control', 'placeholder': 'Username'})
 
 
 class UserForm(UserPersonInfoForm, PasswordForm):
     email = StringField('Email', [Length(min=4, max=64), Email(), InputRequired(), EmailAlreadyUsed()],
-                        render_kw={'class': 'input', 'placeholder': 'Email'}, widget=EmailInput())
+                        render_kw={'class': 'form-control', 'placeholder': 'Email'}, widget=EmailInput())
 
     organization = SelectField('Organization', [InputRequired()])
 
     username = StringField('Username', [Length(min=4, max=64), InputRequired(), UserAlreadyExists()],
-                           render_kw={'class': 'input', 'placeholder': 'Username'})
+                           render_kw={'class': 'form-control', 'placeholder': 'Username'})
 
     registration_method = SelectField('Registration Method', [InputRequired()],
                                       choices=[('password_by_admin', 'Specify a password for the new user'),
@@ -135,26 +142,31 @@ class UserForm(UserPersonInfoForm, PasswordForm):
 
     self_renew = BooleanField('Once expired, can password be self-renewed?')
     expires_in = IntegerField('Password for this account expires every X days', [InputRequired()],
-                              render_kw={'class': 'input', 'placeholder': 'X'})
+                              render_kw={'class': 'form-control', 'placeholder': 'X'})
 
     auto_disable = BooleanField('Should this account automatically disable?')
-    disable_on = DateField('The account disables on', widget=DateInput(), render_kw={'class': 'input'})
+    disable_on = DateField('The account disables on', widget=DateInput(), render_kw={'class': 'form-control'})
 
 
-class RecoverWithEmailForm(FlaskForm):
+class ChangeEmailForm(FlaskForm):
     field = StringField('Email', [Length(min=4, max=64), Email(), InputRequired()],
-                        render_kw={'class': 'input', 'placeholder': 'Email'}, widget=EmailInput(),
+                        render_kw={'class': 'form-control', 'placeholder': 'Email'}, widget=EmailInput(),
                         description='Please specify a valid email address')
+
+
+class RecoverWithEmailForm(ChangeEmailForm):
+    pass
 
 
 class RecoverWithUsernameForm(FlaskForm):
     field = StringField('Username', [Length(min=4, max=64), InputRequired()],
-                        render_kw={'class': 'input', 'placeholder': 'Username'},
+                        render_kw={'class': 'form-control', 'placeholder': 'Username'},
                         description='Please specify a valid username')
 
 
 class SearchFiltersForm(FlaskForm):
-    organizations = SelectMultipleField('Select multiple organizations', coerce=int, choices=[])
+    organizations = SelectMultipleField('Select multiple organizations', coerce=int, choices=[],
+                                        render_kw={'class': 'form-select'})
     expired = BooleanField('Show expired', default=False)
     disabled = BooleanField('Show disabled', default=False)
     expiring_soon = BooleanField('Show expiring soon', default=False)
@@ -163,21 +175,21 @@ class SearchFiltersForm(FlaskForm):
 
 class SearchByUsernameForm(FlaskForm):
     username = StringField('Username', [Length(min=4, max=64), InputRequired()],
-                           render_kw={'class': 'input is-large', 'placeholder': 'Username',
+                           render_kw={'class': 'form-control', 'placeholder': 'Username',
                                       'list': 'search-by-username-datalist'})
 
 
 class GroupForm(FlaskForm):
     groupname = StringField('Group name', [Length(min=4, max=64), InputRequired()],
-                            render_kw={'class': 'input', 'placeholder': 'group name'})
+                            render_kw={'class': 'form-control', 'placeholder': 'group name'})
     group_id = HiddenField()
 
 
 class RadTableForm(FlaskForm):
     attribute = StringField('Attribute', [Length(min=4, max=64), InputRequired()],
-                            render_kw={'class': 'input', 'placeholder': 'attribute', 'list': 'attributes-list'})
+                            render_kw={'class': 'form-control', 'placeholder': 'attribute', 'list': 'attributes-list'})
     op = StringField('Op', [Length(min=1, max=2), InputRequired()],
-                     render_kw={'class': 'input', 'placeholder': 'op', 'list': 'operators-list'})
+                     render_kw={'class': 'form-control', 'placeholder': 'op', 'list': 'operators-list'})
     value = StringField('Value', [Length(min=0, max=253)],
-                        render_kw={'class': 'input', 'placeholder': 'value'})
+                        render_kw={'class': 'form-control', 'placeholder': 'value'})
     attribute_id = HiddenField()

@@ -1,0 +1,57 @@
+{% extends "structural/dashboard_base.html" %}
+
+{% block title %}
+{% if not organization %}Global{% else %}{{ organization.shortname }}'{% endif %} settings{% endblock %}
+
+{% block extraheader %}{% include "structural/header/tables.html" %}{% endblock %}
+
+{% from "structural/macros.html" import manage_datatable %}
+
+{% block content %}
+
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-tools me-2"></i>{{ self.title() }}</h2>
+
+  <form class="row" method="POST" action="{{ request.path }}">
+    {{ form.csrf_token }}
+    
+    <div class="col-12">
+      <table id="settings-list" class="table table-striped">
+        <thead>
+          <tr class="align-middle text-center">
+            <th scope="col" class="">Keyword/Value</th>
+            <th scope="col" class="non-sortable">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+        
+        {% for f in form %}
+          {% if f.type != 'CSRFTokenField' and f.type != 'HiddenField' %}
+          <tr>
+            <td data-sort="{{ f.name }}">
+              <label for="{{ f.id }}" class="form-label"><strong>{{ f.name }}</strong></label>
+              {{ f(class_="form-control") }}
+            </td>
+            <td class="align-bottom">{{ f.description }}</td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="col-12 d-grid my-1">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i><span class="d-inline">Save</span></button>
+    </div>
+    
+  </form>
+</div>
+
+<script>
+  $(document).ready(function(){
+    // ~ setup a simple datatable
+    {{ manage_datatable("#settings-list") }}
+  });
+</script>
+
+{% endblock %}

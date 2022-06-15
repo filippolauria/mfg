@@ -1,28 +1,32 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Edit an organization{% endblock %}
 
-{% block content %}
-<div class="column is-10 is-offset-1">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+{% block extraheader %}{% include "structural/header/tables.html" %}{% endblock %}
 
-    {% from "macros.html" import render_inputfield %}
-        <form method="POST" action="{{ request.path }}">
-            {{ form.csrf_token }}
-            {{ render_inputfield(form.shortname) }}
-			{{ render_inputfield(form.fullname) }}
-            <button class="button is-block is-info is-fullwidth">Edit</button>
-        </form>
+{% from "structural/macros.html" import render_inputfield %}
+
+{% block content %}
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-pencil-square me-2"></i>{{ self.title() }}</h2>
+  
+  <form class="row g-3" method="POST" action="{{ request.path }}">
+    {{ form.csrf_token }}
+  
+    <div class="col-12 col-md-9">
+      {{ render_inputfield(form.fullname, 'building') }}
     </div>
+    
+    <div class="col-12 col-md-3">
+      {{ render_inputfield(form.shortname) }}
+    </div>
+  
+    <div class="col-12 d-grid">
+      <button type="submit" class="btn btn-primary">{{ self.title() }}</button>
+    </div>
+  
+  </form>
+  
 </div>
 
 {% include 'organization/shortlist.html' %}

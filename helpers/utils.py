@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,18 +26,23 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-import random
+import htmlmin
 import unidecode
+from random import SystemRandom
 from string import ascii_lowercase
+from flask import flash, render_template as flask_render_template
 
-from flask import flash
+
+def render_template(template_path, **kwargs):
+    output = flask_render_template(template_path, **kwargs)
+    return str(htmlmin.minify(output, remove_comments=True, remove_empty_space=True, reduce_boolean_attributes=True))
 
 
 def make_token():
     """
     returns a random 32-chars string made of hex characters
     """
-    return '%030x' % random.randrange(16**32)
+    return '%030x' % SystemRandom().randrange(16**32)
 
 
 def lowercase_filter_word(word):

@@ -4,6 +4,7 @@
 #
 # Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,7 +26,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, redirect, url_for, request, flash
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -33,9 +34,9 @@ from mfg import db
 from mfg.forms import MultipleSelectForm
 from mfg.models import Organization, User
 
-from mfg.helpers.config import ConfigManager
+from mfg.helpers.settings import GlobalSettingsManager
 from mfg.helpers.decorators import is_admin, is_admin_or_contact_person
-from mfg.helpers.utils import flash_errors
+from mfg.helpers.utils import flash_errors, render_template
 
 
 contact_person = Blueprint('contact_person', __name__)
@@ -55,7 +56,7 @@ def list():
 
     # we select all the contact persons for the organizations which have been previously selected
     contact_persons = User.query.filter(User.organizations.any(Organization.id.in_(org_ids))).distinct().all()
-    return render_template('contact_person/list.html', conf=ConfigManager, current_user=current_user,
+    return render_template('contact_person/list.html', conf=GlobalSettingsManager, current_user=current_user,
                            contact_persons=contact_persons)
 
 
@@ -116,5 +117,5 @@ def associate_organizations(uid):
 
     # we update form fields before rendering the page
     form.field.data = [int(o.id) for o in this_user.managed_organizations()]
-    return render_template('contact_person/associate.html', conf=ConfigManager, current_user=current_user, form=form,
+    return render_template('contact_person/associate.html', conf=GlobalSettingsManager, current_user=current_user, form=form,
                            user=this_user)

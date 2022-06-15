@@ -2,8 +2,9 @@
 #
 #  blueprints/auth.py
 #
-# Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
+# Copyright 2021-2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -26,16 +27,16 @@
 #
 
 from datetime import datetime, date, timedelta
-from flask import Blueprint, render_template, redirect, url_for, request, abort, flash
-from flask_login import login_user, logout_user, login_required
+from flask import Blueprint, redirect, url_for, request, abort, flash
+from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from mfg import db
 from mfg.models import User, Domain, Organization, Radcheck, SignupToken, WaitingForApproval
-from mfg.forms import LoginForm, SingleEmailForm, AutoSignupForm, AutoSignupWithOrganizationSelectionFrom
+from mfg.forms import LoginForm, SingleEmailForm, AutoSignupForm, AutoSignupWithOrganizationSelectionForm
 from mfg.helpers.hashes import check_password_hash, allowed_hashing_methods, make_hash
-from mfg.helpers.config import ConfigManager, OrganizationConfigManager
-from mfg.helpers.utils import flash_errors, make_token, lowercase_filter_word
+from mfg.helpers.settings import GlobalSettingsManager, OrganizationSettingsManager
+from mfg.helpers.utils import flash_errors, render_template, make_token, lowercase_filter_word
 
 auth = Blueprint('auth', __name__)
 
@@ -60,13 +61,13 @@ def signup_finalization(token):
             abort(410)
 
         # first we check if auto signup feature is still globally enabled (0 disabled, 1 enabled)
-        auto_signup_method = ConfigManager.get('auto.signup.method')
-        if auto_signup_method == 0:
+        self_signup_method = GlobalSettingsManager.get('self.signup.method')
+        if self_signup_method == 0:
             # if the auto signup feature is disabled, we delete the token
             db.session.delete(this_token)
             db.session.commit()
             # TODO log
-            return render_template('signup_finalization.html', conf=ConfigManager)
+            return render_template('signup_finalization.html', conf=GlobalSettingsManager)
 
         # if the auto signup feature is globally enabled,
         # we try to deduce the organization(s) starting from the email associated with the SignupToken
@@ -77,8 +78,8 @@ def signup_finalization(token):
             form = AutoSignupForm(request.form)
             one_organization = True
         else:
-            # ... otherwise we instantiate the more complex AutoSignupWithOrganizationSelectionFrom
-            form = AutoSignupWithOrganizationSelectionFrom(request.form)
+            # ... otherwise we instantiate the more complex AutoSignupWithOrganizationSelectionForm
+            form = AutoSignupWithOrganizationSelectionForm(request.form)
             choices = [(int(o.id), o.shortname) for o in domain_obj.organizations]
             form.organizations.choices = choices
             one_organization = False
@@ -86,7 +87,7 @@ def signup_finalization(token):
         if request.method == 'POST':
             if not form.validate():
                 flash_errors(form)
-                return render_template('signup_finalization.html', conf=ConfigManager, form=form)
+                return render_template('signup_finalization.html', conf=GlobalSettingsManager, form=form)
 
             # we have a valid submitted form
             if one_organization:
@@ -102,17 +103,17 @@ def signup_finalization(token):
             # once we have a valid organization, we can use it to check
             # if the auto signup feature is enabled for that organization
             # 0 disabled, 1 approval always required, 2 approval only when needed
-            organization_auto_signup_method = OrganizationConfigManager(organization).get('auto.signup.method')
+            organization_self_signup_method = OrganizationSettingsManager(organization).get('self.signup.method')
 
             # if auto signup feature is disabled for this organization, we don't procede further
-            if organization_auto_signup_method == 0:
+            if organization_self_signup_method == 0:
                 # TODO log
-                return render_template('signup_finalization.html', conf=ConfigManager)
+                return render_template('signup_finalization.html', conf=GlobalSettingsManager)
 
             # we start creating firstname, lastname and hash
             firstname = form.firstname.data.title()
             lastname = form.lastname.data.title()
-            hash_type = ConfigManager.get('hashing.algorithm')
+            hash_type = GlobalSettingsManager.get('hashing.algorithm')
             hash_value = make_hash(form.password1.data, hash_type)
 
             # then we create the username starting from firstname and lastname
@@ -124,7 +125,7 @@ def signup_finalization(token):
             # organization has been selected by the user
             # or the username already exists
             # or if the approval is always required for this organization
-            should_be_approved = not one_organization or bool(user_obj) or organization_auto_signup_method == 1
+            should_be_approved = not one_organization or bool(user_obj) or organization_self_signup_method == 1
 
             if should_be_approved:
                 # if the new user should be approved,
@@ -148,7 +149,7 @@ def signup_finalization(token):
                 # if the approval is not needed, we create the new user.
 
                 # max_disable_after is the number of days after which the account has to be disabled...
-                max_disable_after = OrganizationConfigManager.get('account.disabled.after.months') * 30
+                max_disable_after = OrganizationSettingsManager.get('account.disabled.after.months') * 30
                 # ... and disable_on is the date when this has to happen
                 disable_on = today + timedelta(days=max_disable_after)
 
@@ -175,7 +176,7 @@ def signup_finalization(token):
         # TODO log the exception (to db ?, to file ?)
         flash(str(e), 'danger')
 
-    return render_template('signup_finalization.html', conf=ConfigManager, form=form)
+    return render_template('signup_finalization.html', conf=GlobalSettingsManager, form=form)
 
 
 @auth.route('/signup', methods=['GET', 'POST'])
@@ -183,18 +184,25 @@ def signup():
     """
     this view allows to start the self-signup procedure.
     """
+
+    # if this user is already authenticated we redirect them to a dashboard
+    if current_user.is_authenticated:
+        redirect_url = url_for(
+            ('main.privileged_dashboard' if current_user.is_admin_or_contact_person() else 'main.regular_dashboard'))
+        return redirect(redirect_url)
+
     try:
         # first we check if auto signup feature is globally enabled (0 disabled, 1 enabled)
-        is_auto_signup_enabled = bool(ConfigManager.get('auto.signup.method'))
+        is_auto_signup_enabled = bool(GlobalSettingsManager.get('self.signup.method'))
         if not is_auto_signup_enabled:
-            return render_template('signup.html', conf=ConfigManager)
+            return render_template('auth/signup.html', conf=GlobalSettingsManager)
 
         # then we present a form where the user can insert their email
         form = SingleEmailForm(request.form)
         if request.method == 'POST':
             if not form.validate():
                 flash_errors(form)
-                return render_template('signup.html', conf=ConfigManager, form=form)
+                return render_template('auth/signup.html', conf=GlobalSettingsManager, form=form)
 
             # if the submitted data is valid, we can procede
             email = form.email.data
@@ -209,26 +217,26 @@ def signup():
             # the retrieve domain is unknown or not associated with any organization
             if user_obj or not (domain_obj and domain_obj.organizations):
                 flash("This email cannot be used for signing up", 'danger')
-                return render_template('signup.html', conf=ConfigManager, form=form)
+                return render_template('auth/signup.html', conf=GlobalSettingsManager, form=form)
 
             # a domain name can be associated with more than one organization
             # if we can find at least one organization which has auto signup enabled, we can procede
             found = False
             for o in domain_obj.organizations:
-                if bool(OrganizationConfigManager(o).get('auto.signup.method')):
+                if bool(OrganizationSettingsManager(o).get('self.signup.method')):
                     found = True
                     break
 
             # if no organization can be found, we cannot procede...
             if not found:
                 flash("Your organization does not allow the auto signup procedure", 'danger')
-                return render_template('signup.html', conf=ConfigManager, form=form)
+                return render_template('auth/signup.html', conf=GlobalSettingsManager, form=form)
 
             # ... otherwise, we delete all SignupToken associated with this email...
             db.session.query(SignupToken).filter(SignupToken.email == email).delete()
 
             # ... and create a new SignupToken
-            hours = ConfigManager.get('max.token.expired.after.hours')
+            hours = GlobalSettingsManager.get('max.token.expired.after.hours')
             token_expires_on = datetime.now() + timedelta(hours=hours)
             new_token = SignupToken(token=make_token(), expires_on=token_expires_on, email=email)
             db.session.add(new_token)
@@ -251,7 +259,7 @@ def signup():
         # TODO log the exception (to db ?, to file ?)
         flash(str(e), 'danger')
 
-    return render_template('signup.html', conf=ConfigManager, form=form)
+    return render_template('auth/signup.html', conf=GlobalSettingsManager, form=form)
 
 
 @auth.route('/login', methods=['GET', 'POST'])
@@ -259,6 +267,12 @@ def login():
     """
     this view allows user to login.
     """
+
+    # if this user is already authenticated we redirect them to a dashboard
+    if current_user.is_authenticated:
+        redirect_url = url_for(
+            ('main.privileged_dashboard' if current_user.is_admin_or_contact_person() else 'main.regular_dashboard'))
+        return redirect(redirect_url)
 
     # we instantiate the login form
     form = LoginForm(request.form)
@@ -276,9 +290,10 @@ def login():
         found = False
         if user and user.is_active:
             # even though we have a default authentication method,
-            # we check against all '%-Password' attributes associated with this user in the radcheck table
+            # we check against all password-like check attributes associated with this user in the radcheck table
             password_attributes = db.session.query(Radcheck).filter((Radcheck.username == username) &
-                                                                    (Radcheck.attribute.like('%-Password'))).all()
+                                                                    (Radcheck.attribute.like('%-Password')) &
+                                                                    (Radcheck.op == ':=')).all()
 
             for radcheck_attribute in password_attributes:
                 try:
@@ -287,21 +302,23 @@ def login():
                         found = check_password_hash(form.password.data, radcheck_attribute.value, type_)
                         break
                 except ValueError:
+                    # TODO log => radcheck_attribute.attribute algorithm not implemented
                     continue
         else:
             found = False
 
         if not found:
-            flash('Please check your login details and try again.')
+            flash('Login failed. Please check your login details and try again.', 'warning')
             return redirect(url_for('auth.login'))
 
         # if the above check passes, then we know the user has the right credentials
         login_user(user, remember=form.remember.data)
-        redirect_url = url_for(('main.privileged_dashboard' if user.is_admin_or_contact_person() else 'main.regular_dashboard'))
+        endpoint = 'main.privileged_dashboard' if user.is_admin_or_contact_person() else 'main.regular_dashboard'
+        redirect_url = url_for(endpoint)
         return redirect(redirect_url)
 
     # get method
-    return render_template('login.html', conf=ConfigManager, form=form)
+    return render_template('auth/login.html', conf=GlobalSettingsManager, form=form)
 
 
 @auth.route('/logout')

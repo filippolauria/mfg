@@ -1,53 +1,67 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Contact persons list{% endblock %}
 
+{% block extraheader %}{% include "structural/header/tables.html" %}{% endblock %}
+
 {% block content %}
 
-<div class="column is-12">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
-        
-        {% if contact_persons %}
-        <table class="table is-fullwidth is-striped is-size-7">
-            <thead>
-                <tr>    
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Organization</th>
-                    <th>Contact person for</th>
-                    {% if current_user.is_admin %}<th>Actions</th>{% endif %}
-                </tr>
-            </thead>
-            <tbody>
-            
-            {% for cp in contact_persons %}
-                <tr>
-                    <td>{{ cp.fullname() }}</td>
-                    <td>{{ cp.username }}</td>
-                    <td>{{ cp.organization.shortname }}</td>
-                    <td>
-                        {% for o in cp.organizations %}
-                            {{ o.name() }}<br>
-                        {% endfor %}
-                    </td>
-                    
-                    {% if current_user.is_admin %}
-                    <td>
-                        <a class="mx-2" href="{{ url_for('contact_person.associate_organizations', uid=cp.id) }}" title="Contact person details">
-                            <i class="fas fa-address-card"></i>
-                        </a>
-                    </td>
-                    {% endif %}
-                </tr>
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi-list-ul me-3"></i>{{ self.title() }}</h2>
+  
+  {% if contact_persons %}
+  <table id="contact-person-list" class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Username</th>
+        <th scope="col">Organization</th>
+        <th scope="col">Contact person for</th>
+        {% if current_user.is_admin %}<th scope="col" class="text-end non-sortable">Actions</th>{% endif %}
+      </tr>
+    </thead>
+    
+    <tbody>
+    {% for contact_person in contact_persons %}
+      <tr>
+        <td>{{ contact_person.fullname() }}</td>
+        <td>{{ contact_person.username }}</td>
+        <td>{{ contact_person.organization.shortname }}</td>
+        <td>
+            {% for o in contact_person.organizations %}
+              {{ o.name() }}<br>
             {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p>There are no contact persons.</p>
+        </td>
+        
+        {% if current_user.is_admin %}
+        <td class="text-end">
+          <a class="btn btn-outline-secondary" href="{{ url_for('contact_person.associate_organizations', uid=contact_person.id) }}" title="Contact person details"><i class="bi bi-card-heading"></i></a>
+        </td>
         {% endif %}
-    </div>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  {% else %}
+  <p class="fs-5">There are no contact persons.</p>
+  {% endif %}
 
 </div>
+
+<script>
+  $(document).ready(function() {
+    $('#contact-person-list').DataTable({
+      "paging": false,
+      "info": false,
+      "ordering": true,
+      columnDefs: [{
+        orderable: false,
+        targets: "non-sortable"
+      }]
+    });
+  });
+</script>
+
 
 {% endblock %}

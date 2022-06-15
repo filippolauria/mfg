@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% include "structural/header/common.html" %}
+    {% block extraheader %}{% endblock %}
+    <title>{{ conf.get('application.shortname') }} :: {% block title %}{% endblock %}</title>
+  </head>
+
+  <body>
+    {% block content %}{% endblock %}
+    {% block extrafooter %}{% endblock %}
+  </body>
+</html>

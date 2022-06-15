@@ -1,73 +1,79 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Associate organizations{% endblock %}
 
+{% block extraheader %}{% include "structural/header/tables.html" %}{% endblock %}
+
+{% from "structural/macros.html" import render_inputfield %}
+
 {% block content %}
 
-<div class="column is-10 is-offset-1">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <p class="block">
-            {% if user.is_admin %}
-                Since <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) is already an administrator of this application they can be considered as a contact person for all the registered organizations.
-            {% else %}
-                You are going to make <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) a contact person for the selected organizations.
-            {% endif %}
-        </p>
-        
-        {% if not user.is_admin %}
-        <form method="POST" action="{{ request.path }}">
-            {{ form.csrf_token }}
-            <div class="field">
-                <label class="label">{{ form.field.label.text }}</label>
-                <div class="select is-multiple is-fullwidth">
-                    {{ form.field }}
-                </div>
-            </div>
-            <button class="button is-block is-info is-fullwidth">Associate</button>
-        </form>
-        {% endif %}
-    </div>
-    
-    {% if not user.is_admin %}
-    <h4 class="title is-4">Associate organizations summary</h4>
-    <div class="box">
-    {% if user.organizations %}
-        
-    <p class="has-text-justified">
-        Here you have a list of all the organizations for which <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) is a contact person:
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-link-45deg me-2"></i>{{ self.title() }}</h2>
+  
+  <div class="row">
+    <p class="fs-5">
+      {% if user.is_admin %}
+      Since <a href="{{ url_for('user.details', uid=user.id) }}" title="User details">{{ user.fullname() }}</a> (<strong>{{ user.organization.shortname }}</strong>) is already an administrator of this application they can be considered as a contact person for all the registered organizations.
+      {% else %}
+      You are going to make <a href="{{ url_for('user.details', uid=user.id) }}" title="User details">{{ user.fullname() }}</a> (<strong>{{ user.organization.shortname }}</strong>) a contact person for the selected organizations.
+      {% endif %}
     </p>
-    <table class="table is-fullwidth is-striped">
-        <thead>
-            <tr>
-                <th>Short name</th>
-                <th>Full name</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for o in user.organizations %}
-            <tr>
-                <td>{{ o.shortname }}</td>
-                <td>{{ o.fullname }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+  </div>
+    
+  {% if not user.is_admin %}
+  <form class="row" method="POST" action="{{ request.path }}">
+    {{ form.csrf_token }}
+    {{ render_inputfield(form.field) }}
+    <div class="d-grid">
+      <button type="submit" class="btn btn-primary mt-3">Associate</button>
+    </div>
+  {% endif %}
+</div>
+
+{% if not user.is_admin %}
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi-list-ul me-2"></i>Associate organizations summary</h2>
+  
+  <div class="row">
+    {% if user.organizations %}
+    <p class="fs-5">
+      Here you have a list of all the organizations for which <strong>{{ user.fullname() }}</strong> (<strong>{{ user.organization.shortname }}</strong>) is a contact person:
+    </p>
+    
+    <table id="organization-list" class="table table-striped">
+      <thead>
+        <tr>
+          <th scope="col">Short name</th>
+          <th scope="col">Full name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in user.organizations %}
+        <tr>
+          <td>{{ o.shortname }}</td>
+          <td>{{ o.fullname }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
     </table>
     {% else %}
-    <p><strong>{{ user.fullname() }}</strong> is not a contact person.</p>
+    <p class="fs-5"><strong>{{ user.fullname() }}</strong> is not a contact person.</p>
     {% endif %}
-    
-    </div>
-    {% endif %}
+  </div>
 </div>
+
+<script>
+  $(document).ready(function() {
+    $('#organization-list').DataTable({
+      "paging": false,
+      "info": false,
+      "ordering": true,
+      "searching": false
+    });
+  });
+</script>
+
+{% endif %}
 
 {% endblock %}

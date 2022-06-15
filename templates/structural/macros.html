@@ -1,0 +1,80 @@
+{% macro render_inputfield(field, icon="") %}
+  <label for="{{ field.id }}" class="form-label">{{ field.label.text }}</label>
+  {% if icon != "" %}
+  <div class="input-group">
+    <span class="input-group-text"><i class="bi-{{ icon }}"></i></span>
+  {% endif %}
+  {{ field }}
+  {% if icon != "" %}</div>{% endif %}
+  {% if field.description %}
+  <div class="form-text">{{ field.description }}</div>
+  {% endif %}
+{% endmacro %}
+
+
+{% macro render_checkbox(field) %}
+<div class="form-check form-switch">
+  {{ field(class_="form-check-input") }}
+  <label class="form-check-label" for="{{ field.id }}">{{ field.label.text }}</label>
+</div>
+{% endmacro %}
+
+{% macro shortlist_datatable(table_selector) %}
+<script>
+  $(document).ready(function() {
+    $("{{ table_selector }}").DataTable({
+      "paging": false,
+      "info": false
+    });
+  });
+</script>
+{% endmacro %}
+
+{% macro uid_form(id, action, form) %}
+<form id="{{ id }}" class="invisible" method="POST" action="{{ action }}">
+    {{ form.csrf_token }}
+    {{ form.uid }}
+</form>
+{% endmacro %}
+
+{% macro start_info_card(icon, title, text) %}
+<div class="col-12 col-md-6 p-1">
+  <div class="flex-column d-flex flex-fill card p-2">
+    
+    <div class="flex-row d-flex align-items-center align-self-center px-1">
+      <i class="bi bi-{{ icon }} icon-2em me-3"></i>
+      <div class="align-self-center py-1">
+        <h4 class="fw-bold mb-0">{{ title }}</h4>
+        <p class="mb-0">{{ text }}</p>
+      </div>
+    </div><!-- /.flex-row d-flex align-items-center align-self-center px-1 -->
+{% endmacro %}
+
+{% macro end_info_card() %}
+  </div><!-- /.flex-column d-flex flex-fill card p-2 -->
+</div><!-- /.col-12 col-md-6 p-1 -->
+{% endmacro %}
+
+{% macro info_card(icon, title, text) %}
+  <div class="flex-row d-flex flex-fill justify-content-center align-items-center card p-2">
+    <div class="flex-row d-flex px-1">
+      <i class="bi bi-{{ icon }} icon-2em me-3 align-self-center"></i>
+      <div class="align-self-center py-1">
+        <h4 class="fw-bold mb-0">{{ title }}</h4>
+        <p class="mb-0">{{ text }}</p>
+      </div>
+    </div>  
+  </div>
+{% endmacro %}
+
+{% macro manage_datatable(table_selector, non_sortable_class="non-sortable") %}
+  $('{{ table_selector }}').DataTable({
+    "paging": false,
+    "info": false,
+    "ordering": true,
+    columnDefs: [{
+      orderable: false,
+      targets: "{{ non_sortable_class }}"
+    }]
+  });
+{% endmacro %}

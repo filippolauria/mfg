@@ -1,4 +1,5 @@
 __pycache__/
 blueprints/__pycache__/
 helpers/__pycache__/
-config.py
+config.json
+resources/lists/dict.txt

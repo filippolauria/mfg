@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% include "structural/header/common.html" %}
+    {% include "structural/header/icons.html" %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='/css/dashboard.css') }}">
+    {% block extraheader %}{% endblock %}
+
+    <title>{{ conf.get('application.shortname') }} :: {% block title %}{% endblock %}</title>
+  </head>
+
+  <body>
+    {% include "structural/navbar.html" %}
+    <div class="container-fluid">
+      <div class="row">
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">{% include "structural/sidebar.html" %}</nav>
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+          {% block content %}{% endblock %}
+          
+          {% include "structural/toast.html" %}
+          
+        </main>
+      </div>
+    </div>
+
+    {% block extrafooter %}{% endblock %}
+  </body>
+</html>

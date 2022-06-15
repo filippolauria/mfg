@@ -1,143 +1,177 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}
 Manage {% if 'check' in table %}check{% elif 'reply' in table %}reply{% endif %} attributes for
 {% if 'group' in table %}group {{ obj.groupname }}{% else %}user {{ obj.username }}{% endif %}
 {% endblock %}
 
+{% block extraheader %}
+{% include "structural/header/tables.html" %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
+
+{% from "structural/macros.html" import render_inputfield, manage_datatable %}
+
 {% block content %}
 
-{% from "macros.html" import render_inputfield, render_checkbox %}
-
-<div class="column is-12">
-    <h3 class="title">{{ self.title() }}</h3>
-    
-    <div class="box">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-gear-fill me-2"></i>{{ self.title() }}</h2>
+  
+  {% if records %}
+  <div class="row">
+    <div class="col-12">
+      <table id="record-list" class="table table-striped">
+        <thead>
+          <tr class="align-middle">
+            <tr>
+              <th scope="col">Attribute</th>
+              <th scope="col"><abbr title="Operator">Op</abbr></th>
+              <th scope="col">Value</th>
+              <th scope="col" class="text-end non-sortable">Actions</th>
+          </tr>
+        </thead>
         
-        {% if elements %}
-        <table class="table is-fullwidth is-striped">
-            <thead>
-                <tr>    
-                    <th>Attribute</th>
-                    <th><abbr title="Operator">Op</abbr></th>
-                    <th>Value</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            
-            {% for e in elements %}
-                <tr id="element-{{ e.id }}">
-                    <td class="is-vcentered">{{ e.attribute }}</td>
-                    <td class="is-vcentered">{{ e.op }}</td>
-                    <td class="is-vcentered">{{ e.value }}</td>
-                    <td class="is-vcentered">
-                        <div class="buttons">
-                            <button class="button is-light edit-button" data-attrid="{{ e.id }}">
-                                <span class="icon is-small">
-                                    <i class="fas fa-edit"></i>
-                                </span>
-                            </button>
-                            <button class="button is-light" data-attrid="{{ e.id }}">
-                                <span class="icon is-small">
-                                    <i class="fas fa-trash"></i>
-                                </span>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p>No attributes have been found.</p>
-        {% endif %}
+        <tbody>
+        {% for record in records %}
+          <tr id="record-{{ record.id }}" class="align-middle">
+            <td scope="row">{{ record.attribute }}</td>
+            <td>{{ record.op }}</td>
+            <td>{{ record.value }}</td>
+            <td class="text-end">
+              <div class="btn-group">
+                <button type="button"{% if not immutable %} data-record-id="{{ record.id }}"{% endif %}
+                  class="btn btn-outline-secondary btn-edit"{% if immutable %} disabled{% endif %}>
+                  <i class="bi bi-pencil-square"></i></button>
+                <button type="button"{% if not immutable %} data-record-id="{{ record.id }}"{% endif %}
+                  class="btn btn-outline-secondary disabled btn-delete"{% if immutable %} disabled{% endif %}>
+                  <i class="bi bi-trash3"></i></button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
     </div>
-    
-    {% from "macros.html" import render_inputfield %}
-    <h4 class="title is-4">
-        <span id="add-or-edit-label">Add</span> {% if 'check' in table %}check{% elif 'reply' in table %}reply{% endif %} attributes for
-        {% if 'group' in table %}group {{ obj.groupname }}{% else %}user {{ obj.username }}{% endif %}
-    </h4>
-    <div class="box">
-        <form method="POST" action="{{ request.path }}">
-            {{ form.csrf_token }}
-            {{ form.attribute_id }}
-            <div class="columns">
-                <div class="column is-two-fifths">
-                    {{ render_inputfield(form.attribute) }}
-                    <datalist id="{{ form.attribute.render_kw['list'] }}">
-                        {% for attr in attrs %}<option value="{{ attr }}"></option>
-                        {% endfor %}
-                    </datalist>
-                </div>
-                <div class="column is-one-fifth">{{ render_inputfield(form.op) }}
-                    <datalist id="{{ form.op.render_kw['list'] }}">
-                        {% for op in ops %}<option value="{{ op }}"></option>
-                        {% endfor %}
-                    </datalist>
-                </div>
-                <div class="column is-two-fifths">
-                    {{ render_inputfield(form.value) }}
-                </div>
-            </div>
-            
-            <div class="columns">
-                <div class="column is-11">
-                    <button id="add-or-edit-button" class="button is-block is-info is-fullwidth">Add</button>
-                </div>
-                <div class="column is-1">
-                    <button id="clear-button" class="button is-light is-danger" title="Clear">
-                        <span class="icon is-small">
-                            <i class="fas fa-times"></i>
-                        </span>
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
+  </div>
+  {% else %}
+  <p class="fs-5">No attributes have been found.</p>
+  {% endif %}
 </div>
 
+{% if not immutable %}
+<div class="container px-4 py-3">
+  <h4 class="pb-3 border-bottom"><span id="title-add-or-edit">Add</span> {% if 'check' in table %}check{% elif 'reply' in table %}reply{% endif %} attributes for
+        {% if 'group' in table %}group {{ obj.groupname }}{% else %}user {{ obj.username }}{% endif %}</h4>
+  
+  <form method="POST" action="{{ request.path }}">
+    {{ form.csrf_token }}
+    {{ form.attribute_id }}
+    
+    <div class="row mb-3">
+      <div class="col-12 col-md-6">
+        {{ render_inputfield(form.attribute) }}
+        <datalist id="{{ form.attribute.render_kw['list'] }}">
+          {% for attr in attrs %}<option value="{{ attr }}"></option>{% endfor %}
+        </datalist>
+      </div>
+
+      <div class="col-12 col-md-2">
+        {{ render_inputfield(form.op) }}
+        <datalist id="{{ form.op.render_kw['list'] }}">
+          {% for op in ops %}<option value="{{ op }}"></option>{% endfor %}
+        </datalist>
+      </div>
+
+      <div class="col-12 col-md-4">
+        {{ render_inputfield(form.value) }}
+      </div>
+    </div>
+    
+    <div class="row mb-3">
+      <div class="col-12 col-md-9 d-grid mb-3">
+        <button type="submit" id="btn-add-or-edit" class="btn btn-primary"><span id="label-add-or-edit">Add</span></button>
+      </div>
+      <div class="col-12 col-md-3 d-grid mb-3">
+        <button type="button" id="btn-clear" class="btn btn-danger">Clear</button>
+      </div>
+    </div>
+  </form>
+</div><!-- /.container px-4 py-3 -->
+{% endif %}
+
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-    var attr_id_obj = document.getElementById('{{ form.attribute_id.id }}'),
-        attr_obj = document.getElementById('{{ form.attribute.id }}'),
-        op_obj = document.getElementById('{{ form.op.id }}'),
-        value_obj = document.getElementById('{{ form.value.id }}'),
-        addOrEditButton = document.getElementById('add-or-edit-button'),
-        addOrEditLabel = document.getElementById('add-or-edit-label');
     
-	var editButtons = document.getElementsByClassName('edit-button');
-	for (var i = 0; i < editButtons.length; i++) {
-		editButtons[i].addEventListener('click', function(e){
-            var attr_id = this.getAttribute('data-attrid'),            
-                tr_obj = document.getElementById('element-' + attr_id),
-                td_objs = tr_obj.getElementsByTagName('td');
-            
-            attr_id_obj.value = attr_id;
-            attr_obj.value = td_objs[0].childNodes[0].nodeValue;
-            op_obj.value = td_objs[1].childNodes[0].nodeValue;
-            value_obj.value = td_objs[2].childNodes[0].nodeValue;
-            addOrEditButton.childNodes[0].nodeValue = addOrEditLabel.childNodes[0].nodeValue = "Edit";
-		});
-	}
+$(document).ready(function() {
+  {% if not immutable %}
     
-    var clearButton = document.getElementById('clear-button');
-    clearButton.addEventListener('click', function(e){
-        attr_id_obj.value = "";
-        attr_obj.value = "";
-        op_obj.value = "";
-        value_obj.value = "";
-        addOrEditButton.childNodes[0].nodeValue = addOrEditLabel.childNodes[0].nodeValue = "Add";
+  var addOrEditSelectors = ["#label-add-or-edit", "#title-add-or-edit"],
+      attributeIdElement = $('#{{ form.attribute_id.id }}'),
+      attributeElement = $('#{{ form.attribute.id }}'),
+      opElement = $('#{{ form.op.id }}'),
+      valueElement = $('#{{ form.value.id }}'),
+      formElements = [ attributeIdElement, attributeElement, opElement, valueElement ];
+
+  var oldSelectedClass = "",
+      selectedTrElement = null;
+  
+  function isTableRowSelected() {
+    return Boolean(oldSelectedClass) && selectedTrElement != null;
+  }
+
+  //~ clear button
+  $('#btn-clear').click(function(){
+    $.each(formElements, function(i, elem) {
+      elem.val("");
     });
+    
+    $.each(addOrEditSelectors, function(i, selector) {
+      $(selector).text("Add");  
+    });
+    
+    if (isTableRowSelected()) {
+      selectedTrElement.attr("class", oldSelectedClass);
+      oldSelectedClass = "";
+      selectedTrElement = null;
+    }
+    
+  });
+  
+  //~ btn-edit
+  $('.btn-edit').each(function(i, elem) {
+    $(elem).click(function() {
+      var recordId = $(elem).data('record-id'),
+          thisRecordElement = $("#record-" + recordId),
+          thisAttributeText = thisRecordElement.find("td").eq(0).text(),
+          thisOpText = thisRecordElement.find("td").eq(1).text(),
+          thisValueText = thisRecordElement.find("td").eq(2).text();
+          
+      attributeIdElement.val(recordId);
+      attributeElement.val(thisAttributeText);
+      opElement.val(thisOpText);
+      valueElement.val(thisValueText);
+      
+      $.each(addOrEditSelectors, function(i, selector) {
+        $(selector).text("Edit");
+      });
+      
+      if (isTableRowSelected()) {
+        selectedTrElement.attr("class", oldSelectedClass);
+      }
+
+      selectedTrElement = $(this).closest("tr");
+      oldSelectedClass = selectedTrElement.attr("class");
+      selectedTrElement.addClass("bg-warning bg-gradient");
+
+    });
+  });
+  
+  {% endif %}
+  
+  // ~ setup a simple datatable
+  {{ manage_datatable("#record-list") }}
+
 });
+
 </script>
 
 

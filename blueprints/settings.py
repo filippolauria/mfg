@@ -4,6 +4,7 @@
 #
 # Copyright 2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,35 +26,38 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import Blueprint, render_template, request, flash
+from flask import Blueprint, request, flash, abort, redirect, url_for
 from flask_login import current_user
 from flask_wtf import FlaskForm
 
 from mfg import db
-from mfg.models import GlobalSettings
+from mfg.models import Organization, GlobalSettings, OrganizationSettings
 from sqlalchemy.exc import SQLAlchemyError
 from wtforms import IntegerField, StringField
 
-from mfg.helpers.config import ConfigManager, default_global_settings as dgs
-from mfg.helpers.decorators import is_admin
-from mfg.helpers.utils import flash_errors
+from mfg.helpers.settings import GlobalSettingsManager, OrganizationSettingsManager, \
+                                 default_global_settings, default_organization_settings
+from mfg.helpers.decorators import is_admin, is_admin_or_contact_person
+from mfg.helpers.utils import flash_errors, render_template
 
 
 settings = Blueprint('settings', __name__)
 
 
-@settings.route('/admin/settings', methods=['GET', 'POST'])
-@is_admin
-def admin():
-    # we retrieve all the settings from the database
-    global_settings = db.session.query(GlobalSettings).all()
+def settings_table_helper(SettingsManager, settings_, default_settings, organization=None):
+    def func(o, k, v):
+        if o == None:
+            GlobalSettingsManager.set(k, v)
+            return
+
+        OrganizationSettingsManager(o).set(k, v)
 
     # temporary form class for create a variable number of fields
     class F(FlaskForm):
         pass
 
-    for s in global_settings:
-        field_type = dgs[s.keyword]['coerce']
+    for s in settings_:
+        field_type = default_settings[s.keyword]['coerce']
 
         if field_type is int:
             Field = IntegerField
@@ -61,7 +65,7 @@ def admin():
             Field = StringField
 
         field_obj = Field(s.keyword, render_kw={'class': 'input', 'placeholder': s.keyword},
-                          default=s.value, description=dgs[s.keyword]['desc'])
+                          default=s.value, description=default_settings[s.keyword]['desc'])
         setattr(F, s.keyword, field_obj)
 
     # instantiate the form
@@ -76,20 +80,69 @@ def admin():
                     if field.type in ['CSRFTokenField', 'HiddenField']:
                         continue
 
-                    setting = db.session.query(GlobalSettings).filter(GlobalSettings.keyword == field.name).first()
-                    if not setting:
-                        # TODO log
-                        continue
+                    func(organization, field.name, field.data)
 
-                    setting.value = str(field.data)
-                    db.session.commit()
+                flash("Settings saved successfully.", "success")
 
             except SQLAlchemyError as e:
                 # TODO replace the exception text with a custom error message
                 # TODO log the exception (to db ?, to file ?)
                 flash(str(e), 'danger')
 
-    # update selected choices
-    # ~ form.field.data = [int(domain.id) for domain in this_organization.domains]
+    return render_template('settings/edit.html', conf=GlobalSettingsManager, current_user=current_user,
+                           form=form, organization=organization)
 
-    return render_template('settings/global.html', conf=ConfigManager, current_user=current_user, form=form)
+
+@settings.route('/admin/organization_settings/<int:oid>', methods=['GET', 'POST'])
+@is_admin_or_contact_person
+def _organization(oid):
+    try:
+        this_organization = db.session.query(Organization).get(oid)
+
+        if not this_organization:
+            #TODO log
+            abort(404)
+
+        if not current_user.is_contact_person_for(this_organization):
+            #TODO log
+            abort(403)
+
+        if not this_organization.settings:
+            #TODO log
+            OrganizationSettingsManager(this_organization).set_default()
+            
+        settings_ = this_organization.settings
+
+        default_settings = default_organization_settings
+
+        return settings_table_helper(OrganizationSettingsManager(this_organization),
+                                     settings_, default_settings, this_organization)
+
+    except SQLAlchemyError as e:
+        # TODO replace the exception text with a custom error message
+        # TODO log the exception (to db ?, to file ?)
+        flash(str(e), 'danger')
+
+    return redirect(url_for('main.privileged_dashboard'))
+
+
+@settings.route('/admin/global_settings/manage', methods=['GET', 'POST'])
+@is_admin
+def _global():
+    try:
+        # we retrieve all the settings from the database
+        settings_ = db.session.query(GlobalSettings).all()
+        if not settings:
+            #TODO log
+            abort(404)
+
+        default_settings = default_global_settings
+
+        return settings_table_helper(GlobalSettingsManager, settings_, default_settings)
+
+    except SQLAlchemyError as e:
+        # TODO replace the exception text with a custom error message
+        # TODO log the exception (to db ?, to file ?)
+        flash(str(e), 'danger')
+
+    return redirect(url_for('main.privileged_dashboard'))

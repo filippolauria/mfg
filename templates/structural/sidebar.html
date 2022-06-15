@@ -1,0 +1,95 @@
+{% from "macros.html" import render_aside_field2 %}
+
+  <div class="position-sticky pt-3">
+  {% if request.path.startswith("/admin") %}
+    {% if current_user.is_admin_or_contact_person() %}
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Users</span>
+    </h6>
+    
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Create an user', url_for('user.create')) }}
+      {{ render_aside_field2('Manage users', url_for('user.list')) }}
+      {{ render_aside_field2('Search by username', url_for('user.search')) }}
+    </ul>
+    {% endif %}
+    
+    {% if current_user.is_admin %}
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Groups</span>
+    </h6>
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Manage groups', url_for('group.manage')) }}
+    </ul>
+    
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Organizations</span>
+    </h6>
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Create an organization', url_for('organization.create')) }}
+      {{ render_aside_field2('Manage organizations', url_for('organization.list')) }}
+    </ul>
+    
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Contact Persons</span>
+    </h6>
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Manage contact persons', url_for('contact_person.list')) }}
+    </ul>
+    
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Domain names</span>
+    </h6>
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Create a domain name', url_for('domain.create')) }}
+      {{ render_aside_field2('Manage domain names', url_for('domain.list')) }}
+    </ul>
+
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>General</span>
+    </h6>
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Global settings', url_for('settings._global')) }}
+      <li class="nav-item"><a class="nav-link" href="#"><span data-feather="file-text"></span>Events log</a></li>
+    </ul>
+    {% endif %}
+    
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Per-organization settings</span>
+    </h6>
+    <ul class="nav flex-column">
+      {% set organizations = current_user.managed_organizations() %}
+      {% if organizations|length > 1 %}
+      <li class="nav-item">
+        <div class="btn-group dropup">
+          <a class="nav-link" style="cursor:pointer" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-caret-up"></i> Select the organization...
+          </a>
+          <ul class="dropdown-menu ms-3">
+            {% for organization in organizations %}
+            <li>
+              <a class="dropdown-item" href="{{ url_for('settings._organization', oid=organization.id) }}">
+                {{ organization.shortname }} Settings
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </li>
+      {% else %}
+        {% set label = organizations.0.shortname + " Settings" %}
+        {{ render_aside_field2(label, url_for('settings._organization', oid=organizations.0.id)) }}
+      {% endif %}
+    </ul>
+    
+  {% elif request.path.startswith("/user") %}
+    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+      <span>Users</span>
+    </h6>
+    
+    <ul class="nav flex-column">
+      {{ render_aside_field2('Details', url_for('user.user_details')) }}
+      {{ render_aside_field2('Change Password', url_for('user.change_password')) }}
+    </ul>
+  {% endif %}
+  </div>

@@ -1,0 +1,175 @@
+{% extends "structural/dashboard_base.html" %}
+
+{% block title %}Manage groups{% endblock %}
+
+{% block extraheader %}
+{% include "structural/header/tables.html" %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
+
+{% from "structural/macros.html" import render_inputfield, manage_datatable, uid_form %}
+
+{% block content %}
+
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi bi-gear-fill me-2"></i>{{ self.title() }}</h2>
+
+  {% if groups %}
+  <div class="row">
+    <div class="col-12">
+
+      <table id="group-list" class="table table-striped">
+        <thead>
+          <tr class="align-middle">
+            <th scope="col" class="text-start">Group name</th>
+            <th scope="col" class="text-start">Group type</th>
+            <th scope="col" class="text-end non-sortable">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for group in groups %}
+          <tr class="align-middle">
+            <td class="text-start" id="group-{{ group.id }}-name">{{ group.groupname }}</td>
+            <td>
+            {% if group.radgroupcheck_attributes %}<span class="badge bg-secondary">Check</span>
+            {% elif group.radgroupreply_attributes %}<span class="badge bg-secondary">Reply</span>
+            {% else %}-{% endif %}
+            </td>
+            <td class="text-end">
+              <div class="btn-group">
+                {% if group.radgroupcheck_attributes %}
+                <a class="btn btn-outline-secondary position-relative" href="{{ url_for('radius.radgroupcheck', gid=group.id) }}" title="Manage group check attributes">
+                  <i class="bi bi-table"></i>
+                  <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-secondary">
+                    {{ group.radgroupcheck_attributes|length }}
+                  </span>
+                  <span class="visually-hidden">{{ group.radgroupcheck_attributes|length }} group check attribute(s)</span>
+                </a>
+                
+                {% elif group.radgroupreply_attributes %}
+                <a class="btn btn-outline-secondary position-relative" href="{{ url_for('radius.radgroupreply', gid=group.id) }}" title="Manage group reply attributes">
+                  <i class="bi bi-table"></i>
+                  <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-secondary">
+                    {{ group.radgroupreply_attributes|length }}
+                  </span>
+                  <span class="visually-hidden">{{ group.radgroupreply_attributes|length }} group reply attribute(s)</span>
+                </a>
+                {% else %}
+                <a class="btn btn-outline-secondary" href="{{ url_for('radius.radgroupcheck', gid=group.id) }}" title="Manage group reply attributes">
+                  <i class="bi bi-table me-2"></i><span class="badge bg-secondary">Check</span>
+                </a>
+                <a class="btn btn-outline-secondary" href="{{ url_for('radius.radgroupreply', gid=group.id) }}" title="Manage group reply attributes">
+                  <i class="bi bi-table me-2"></i><span class="badge bg-secondary">Reply</span>
+                </a>
+                {% endif %}
+                  
+                <button type="button" data-group-id="{{ group.id }}" class="btn btn-outline-secondary btn-edit" title="Edit this group">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+                <button type="button" data-group-id="{{ group.id }}" class="btn btn-outline-secondary btn-delete" title="Delete this group">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+  {% endif %}
+</div>  
+
+<div class="container px-4 py-3">
+  <h4 class="pb-3 border-bottom"><span id="title-add-or-edit">Add</span> a group</h4>
+
+  <form class="d-md-flex flex-md-row" method="POST" action="{{ url_for('group.manage') }}">
+    {{ form.csrf_token }}
+    {{ form.group_id }}
+    
+    <div class="p-2 flex-grow-1">
+      {{ render_inputfield(form.groupname) }}
+    </div>
+    <div class="d-grid gap-2 d-md-flex align-self-md-end p-2">
+      <button type="submit" id="btn-add-or-edit" class="btn btn-primary"><span id="label-add-or-edit">Add</span></button>
+      <button type="button" id="btn-clear" class="btn btn-danger">Clear</button>
+    </div>
+
+  </form>
+  
+</div>
+
+{% if form_delete %}
+{{ uid_form('form-delete', url_for('group.delete'), form_delete) }}
+{% endif %}
+
+<script>
+$(document).ready(function() {
+  var formDeleteSelector = "#form-delete",
+      formDeleteElement = $(formDeleteSelector),
+      addOrEditSelectors = ["#label-add-or-edit", "#title-add-or-edit"],
+      groupnameElement = $('#{{ form.groupname.id }}'),
+      groupIdElement = $('#{{ form.group_id.id }}');
+
+  {% if form_delete %}
+  // ~ generate delete button actions
+  generateDeleteButtons('#form-delete', '#{{ form_delete.uid.id }}', 'group-id', '.btn-delete');
+  {% endif %}
+
+  var oldSelectedClass = "",
+      selectedTrElement = null;
+  
+  function isTableRowSelected() {
+    return Boolean(oldSelectedClass) && selectedTrElement != null;
+  }
+  
+  //~ clear button
+  $('#btn-clear').click(function(){
+    groupIdElement.val('');
+    groupnameElement.val('');
+
+    $.each(addOrEditSelectors, function(i, selector) {
+      $(selector).text("Add");
+    });
+
+    if (isTableRowSelected()) {
+      selectedTrElement.attr("class", oldSelectedClass);
+      oldSelectedClass = "";
+      selectedTrElement = null;
+    }
+    
+  });
+
+  //~ generate edit actions
+  $('.btn-edit').each(function(i, elem) {
+    $(elem).click(function() {
+      var groupId = $(elem).data('group-id'),
+          thisGroupnameElement = $("#group-" + groupId + "-name");
+
+      groupIdElement.val(groupId);
+
+      groupnameElement.val(thisGroupnameElement.text());
+      $.each(addOrEditSelectors, function(i, selector) {
+        $(selector).text("Edit");
+      });
+      
+      if (isTableRowSelected()) {
+        selectedTrElement.attr("class", oldSelectedClass);
+      }
+
+      selectedTrElement = $(this).closest("tr");
+      oldSelectedClass = selectedTrElement.attr("class");
+      selectedTrElement.addClass("bg-warning bg-gradient");
+
+    });
+  });
+
+  // ~ setup a simple datatable
+  {{ manage_datatable("#group-list") }}
+
+});
+</script>
+
+
+{% endblock %}

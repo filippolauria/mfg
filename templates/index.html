@@ -1,74 +1,117 @@
-{% extends "base.html" %}
+{% extends "structural/centered_base.html" %}
 
 {% block title %}{% if form %}First installation{% else %}Welcome{% endif %}{% endblock %}
 
+{% block extraheader %}
+{% include "structural/header/icons.html" %}
+{% if form %}<script src="{{ url_for('static', filename='/js/common.js') }}"></script>{% endif %}
+{% endblock %}
+
+{% from "structural/macros.html" import render_inputfield %}
+
 {% block content %}
 
+<main class="container-fluid">
 {% if not form %}
-<div class="hero-body">
-    <div class="container has-text-centered">
-        <h1 class="title">{{ conf.get('application.name') }}</h1>
-    </div>
-</div>
-{% else %}
 
-<section class="hero is-info">
-    <div class="hero-body">
-        <p class="title">{{ self.title() }}</p>
-        <p class="subtitle">
-            You are going to create a new organization and a new administrator account.
-        </p>
+  <div class="row my-3">
+    <div class="col-10 offset-1">
+      <h2 class="pb-3 border-bottom text-center">Welcome to {{ conf.get('application.name') }}</h2>
+      <h3>Welcome message placeholder.</h3>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed id dignissim felis. Curabitur eu lorem eros. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Pellentesque in auctor dolor, sed accumsan nulla. Mauris placerat tortor eu eleifend dignissim. Quisque rutrum lectus nec urna bibendum, non tempus velit venenatis. Duis velit est, vestibulum sed nibh ut, porta maximus nisl. Praesent ultricies est sed ullamcorper hendrerit. Nunc libero dui, maximus fermentum gravida ut, viverra ac velit. Maecenas posuere mattis lacinia. Nam vitae maximus mauris. Nam orci magna, tincidunt ac velit quis, ornare interdum justo. Fusce et ullamcorper est. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse feugiat id magna sit amet pretium. </p>
+      <h3>Welcome message placeholder.</h3>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed id dignissim felis. Curabitur eu lorem eros. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Pellentesque in auctor dolor, sed accumsan nulla. Mauris placerat tortor eu eleifend dignissim. Quisque rutrum lectus nec urna bibendum, non tempus velit venenatis. Duis velit est, vestibulum sed nibh ut, porta maximus nisl. Praesent ultricies est sed ullamcorper hendrerit. Nunc libero dui, maximus fermentum gravida ut, viverra ac velit. Maecenas posuere mattis lacinia. Nam vitae maximus mauris. Nam orci magna, tincidunt ac velit quis, ornare interdum justo. Fusce et ullamcorper est. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse feugiat id magna sit amet pretium. </p>
     </div>
-</section>
-
-<div class="column is-10 is-offset-1">
-    <div class="box">
-        
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-            {% endfor %}
+  </div>
+  
+  <div class="row my-3">
+    <div class="col-10 offset-1 text-center">
+      {% if not current_user.is_authenticated %}
+      <a class="btn btn-primary btn-lg mx-1" href="{{ url_for('auth.login') }}" role="button">
+        <i class="bi bi-door-open-fill me-2"></i><span class="d-inline">Login</span>
+      </a>
+      {% else %}
+        {% if current_user.is_admin_or_contact_person() %}
+          <a class="btn btn-primary btn-lg mx-1" href="{{ url_for('main.privileged_dashboard') }}" role="button">
+            <i class="bi bi-speedometer2 me-2"></i><span class="d-inline">Admin view</span>
+          </a>
+          
+          {% set user_dashboard_btn_class = "secondary" %}
+          {% set user_dashboard_btn_label = "User view" %}
+        {% else %}
+          {% set user_dashboard_btn_class = "primary" %}
+          {% set user_dashboard_btn_label = "Dashboard" %}
         {% endif %}
-    {% endwith %}
 
-    {% from "macros.html" import render_inputfield, render_checkbox %}
-        <form method="POST" action="{{ url_for('main.index') }}">
-            {{ form.csrf_token }}
-
-            <h5 class="title is-5">Organization details</h5>
-            <div class="field">
-                <div class="field-body">
-                    {{ render_inputfield(form.shortname) }}
-                    {{ render_inputfield(form.fullname) }}
-                </div>
-            </div>
-            
-            
-            <h5 class="title is-5">Administrator details</h5>
-            <div class="field">
-                <div class="field-body">
-                    {{ render_inputfield(form.email, 'envelope-open-text') }}
-                    {{ render_inputfield(form.username, 'user') }}
-                </div>
-            </div>
-            <div class="field">
-                <div class="field-body">
-                    {{ render_inputfield(form.firstname) }}
-                    {{ render_inputfield(form.lastname) }}
-                </div>
-            </div>
-            <div class="field">
-                <div class="field-body">
-                    {{ render_inputfield(form.password1, 'lock') }}
-                    {{ render_inputfield(form.password2, 'lock') }}
-                </div>
-            </div>
-            <button class="button is-block is-info is-fullwidth">Create</button>
-        </form>
+          <a class="btn btn-{{ user_dashboard_btn_class }} btn-lg mx-1" href="{{ url_for('main.regular_dashboard') }}" role="button">
+            <i class="bi bi-speedometer2 me-2"></i>{{ user_dashboard_btn_label }}</a>
+      {% endif %}
     </div>
-</div>
+  </div>
+{% else %}
+  <form class="row my-3" method="POST" action="{{ url_for('main.index') }}">
+    {{ form.csrf_token }}
+    
+    <div class="col-md-6 offset-md-3 my-5">
+      <h2 class="pb-3 border-bottom text-center">{{ self.title() }}</h2>
+      <p>You are going to create a new organization and a new administrator account.</p>
+    </div>
+    
+    <div class="col-md-6 offset-md-3">
+      <div class="row">
+        <h5 class="pb-3 border-bottom"><i class="bi bi-building me-2"></i>Organization details</h5>
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.shortname) }}</div>
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.fullname) }}</div>
+      </div>
+    </div>
+    
+    <div class="col-md-6 offset-md-3">
+      <div class="row">
+        <h5 class="pb-3 border-bottom"><i class="bi bi-tools me-2"></i>Admin details</h5>
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.email, 'envelope-open-fill') }}</div>
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.username, 'person-fill') }}</div>
+
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.firstname) }}</div>
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.lastname) }}</div>
+
+        <div class="col-12 col-md-6 my-3">
+          <label for="{{ form.password1.id }}" class="form-label">{{ form.password1.label.text }}</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+            {{ form.password1 }}
+            <button id="btn-random-password" type="button" class="input-group-text" title="Generate random password">
+              <i class="bi bi-shuffle"></i>
+            </button>
+            <button id="btn-show-hide-password" type="button" class="input-group-text" title="Show/Hide">
+              <i class="bi bi-eye-fill"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.password2, 'lock-fill') }}</div>
+      </div>
+    </div>
+    
+    <div class="col-md-6 offset-md-3 d-grid my-3">
+      <button type="submit" class="d-grid btn btn-primary">Create</button>
+    </div>
+    
+  </form>
+  
+<script>
+  $(document).ready(function(){
+    generatePasswordTogglerAndShuffler(
+      '#{{ form.password1.id }}',
+      '#{{ form.password2.id }}',
+      '#btn-show-hide-password',
+      '#btn-random-password',
+      '{{ url_for("main.random_password") }}'
+    ); 
+  });
+</script>
+
+  {% include "structural/toast.html" %}
 
 {% endif %}
+</main>
 
 {% endblock %}

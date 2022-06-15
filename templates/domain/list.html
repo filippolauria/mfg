@@ -1,61 +1,89 @@
-{% extends "base.html" %}
+{% extends "structural/dashboard_base.html" %}
 
 {% block title %}Domain names list{% endblock %}
 
+{% block extraheader %}
+{% include "structural/header/tables.html" %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 
-<div class="column is-10 is-offset-1">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-            <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-                {% endfor %}
+<div class="container px-4 py-3">
+  <h2 class="pb-3 border-bottom"><i class="bi-list-ul me-2"></i>{{ self.title() }}</h2>
+
+  {% if domains %}
+  <div class="row">
+    <div class="col-12">
+
+      <table id="domain-list" class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <tr>
+              <th scope="col">Domain name</th>
+              <th scope="col">Created</th>
+              <th scope="col">Modified</th>
+              <th scope="col" class="text-end non-sortable">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for domain in domains %}
+          <tr>
+            <td scope="row">
+              {{ domain.domain_name }}
+            </td>
+            <td data-sort="{{ domain.created_on }}">
+              Created by <strong>{{ domain.createdby.username }}</strong> on <strong>{{ domain.created_on }}</strong>
+            </td>
+            {% if domain.modifiedby %}
+            <td data-sort="{{ domain.modified_on }}">
+              Modified by <strong>{{ domain.modifiedby.username }}</strong> on <strong>{{ domain.modified_on }}</strong>
+            </td>
+            {% else %}
+            <td>-</td>
             {% endif %}
-        {% endwith %}
-        
-        {% if domains %}
-        <table class="table is-fullwidth is-striped">
-            <thead>
-                <tr>
-                    <th>Domain name</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            
-            {% for domain in domains %}
-                <tr>
-                    <td class="is-vcentered">{{ domain.domain_name }}</td>
-                    <td class="is-vcentered">
-                        <div class="buttons">
-                            <a class="button is-light" href="{{ url_for('domain.edit', uid=domain.id) }}" title="Edit this domain name">
-                                <span class="icon is-small">
-                                    <i class="fas fa-edit"></i>
-                                </span>
-                            </a>
-                            <button class="button is-light" onclick="set_and_submit({{ domain.id }})" title="Delete this domain name">
-                                <span class="icon is-small">
-                                    <i class="fas fa-trash"></i>
-                                </span>
-                            </button>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <p>No domain names have been found. Create one from <a href="{{ url_for('domain.create') }}">here</a>.</p>
-        {% endif %}
+            <td class="text-end">
+              <div class="btn-group">
+                <a href="{{ url_for('domain.edit', uid=domain.id) }}" class="btn btn-outline-secondary" title="Edit this domain name"><i class="bi bi-pencil-square"></i></a>
+                <button type="button" data-domain-id="{{ domain.id }}" class="btn btn-outline-secondary btn-delete"><i class="bi bi-trash3"></i></button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+
     </div>
+  </div>
+  {% else %}
+  <p class="fs-5">No domain names have been found. Create one from <a href="{{ url_for('domain.create') }}">here</a>.</p>
+  {% endif %}
 </div>
 
+{% if domains %}
 
-<form style="display: none;" id="delete-form" method="POST" action="{{ url_for('domain.delete') }}">
+<form style="display: none;" id="form-delete" method="POST" action="{{ url_for('domain.delete') }}">
     {{ form.csrf_token }}
     {{ form.uid }}
 </form>
+
+<script>
+  $(document).ready(function() {
+    // ~ generate delete button actions
+    generateDeleteButtons('#form-delete', '#{{ form.uid.id }}', 'domain-id', '.btn-delete');
+
+    $('#domain-list').DataTable({
+      "paging": false,
+      "info": false,
+      "ordering": true,
+      columnDefs: [{
+        orderable: false,
+        targets: "non-sortable"
+      }]
+    });
+  });
+</script>
+
+{% endif %}
 
 {% endblock %}

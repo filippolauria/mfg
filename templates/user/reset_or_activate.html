@@ -1,33 +1,81 @@
-{% extends "base.html" %}
-
-{% from "macros.html" import render_inputfield, ucfirst %}
+{% extends "structural/centered_base.html" %}
 
 {% block title %}
-{{ ucfirst(token.action.name) }} your account
+{% if token.action.name == 'reset' %}Reset your password
+{% else %}Activate your account
+{% endif %}
+{% endblock %}
+
+{% block extraheader %}
+{% include "structural/header/icons.html" %}
+<script src="{{ url_for('static', filename='/js/common.js') }}"></script>
 {% endblock %}
 
 {% block content %}
-<div class="column is-6 is-offset-3">
-    <h3 class="title">{{ self.title() }}</h3>
-    <div class="box">
+<main class="container-fluid">
+  <div class="row my-3">
+    <div class="col-10 offset-1">
+      <h2 class="pb-3 border-bottom text-center">{{ conf.get('application.name') }}</h2>
+      <p>You are going to {{ self.title().lower() }}</p>
+    </div>
+  </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-        <div class="notification is-{{ category }}" role="alert"> {{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    {% if form %}
-		<form method="POST" action="{{ url_for('user.reset_or_activate', token=token.token) }}">
-            {{ form.csrf_token }}
-			{{ render_inputfield(form.password1, 'lock') }}
-			{{ render_inputfield(form.password2, 'lock') }}
-			<button class="button is-block is-info is-large is-fullwidth">{{ ucfirst(token.action.name) }} your account</button>
-		</form>
-    {% endif %}
+  <div class="row my-3">
+    <div class="col-10 offset-1">
+    
+      <form class="row g-3" method="POST" action="{{ url_for('user.reset_or_activate', token=token.token) }}">
+        {{ form.csrf_token }}
+	
+	<div class="col-12 col-md-6">
+	  <div class="mb-3">
+            <label for="{{ form.password1.id }}" class="form-label">{{ form.password1.label.text }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+              {{ form.password1 }}
+              <button id="btn-random-password" type="button" class="input-group-text" title="Generate random password">
+                <i class="bi bi-shuffle"></i>
+              </button>
+              <button id="btn-show-hide-password" type="button" class="input-group-text" title="Show/Hide">
+                <i class="bi bi-eye-fill"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+    
+	<div class="col-12 col-md-6">
+	  <div class="mb-3">
+	    <label for="{{ form.password2.id }}" class="form-label">{{ form.password2.label.text }}</label>
+	    <div class="input-group">
+	      <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+	      {{ form.password2 }}
+	    </div>
+	  </div>
 	</div>
-</div>
+    
+    	<div class="col-12 d-grid">
+	  <button type="submit" class="btn btn-primary">{{ self.title() }}</button>
+    	</div>
+      </form>
+    
+    </div>
+  </div>
+
+  
+  <script>
+    $(document).ready(function(){
+      generatePasswordTogglerAndShuffler(
+        '#{{ form.password1.id }}',
+        '#{{ form.password2.id }}',
+        '#btn-show-hide-password',
+        '#btn-random-password',
+        '{{ url_for("main.random_password") }}'
+      );
+    });
+  </script>
+  
+
+  {% include "structural/toast.html" %}
+  
+</main>
 {% endblock %}
 

@@ -1,0 +1,37 @@
+{% extends "structural/centered_base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block extraheader %}
+<link rel="stylesheet" href="{{ url_for('static', filename='/css/login-form.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="login-form text-center">
+  <h1 class="mb-4">Welcome to<br>{{ conf.get('application.name') }}</h1>
+  <h2 class="h3 mb-3 fw-normal">Please Login to continue</h2>
+
+  {% if form %}
+  <form method="POST" action="{{ url_for('auth.login') }}">
+    {{ form.csrf_token }}
+
+    <div class="form-floating">
+      {{ form.username }}
+      <label for="{{ form.username.id }}" class="form-label">{{ form.username.label.text }}</label>
+    </div>
+
+    <div class="form-floating">
+      {{ form.password }}
+      <label for="{{ form.password.id }}" class="form-label">{{ form.password.label.text }}</label>
+    </div>
+
+    <button class="w-100 btn btn-lg btn-primary" type="submit">Login</button>
+    <p class="my-1 text-end"><a class="btn btn-link" href="{{ url_for('user.forgot_password_username') }}">Forgot password?</a></p>
+  </form>
+  {% endif %}
+  
+  {% include "structural/toast.html" %}
+  
+</main>
+
+{% endblock %}

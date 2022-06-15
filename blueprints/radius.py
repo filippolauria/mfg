@@ -2,8 +2,9 @@
 #
 #  blueprints/radius.py
 #
-# Copyright 2021 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
+# Copyright 2022 Filippo Maria LAURIA <filippo.lauria@iit.cnr.it>
 #
+# Computer and Communication Networks (CCN)
 # Institute of Informatics and Telematics (IIT)
 # Italian National Council of Research (CNR)
 #
@@ -25,7 +26,7 @@
 # If not, see <http://www.gnu.org/licenses/>.
 #
 
-from flask import Blueprint, render_template, request, flash, abort
+from flask import Blueprint, current_app, request, flash, abort
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -33,15 +34,15 @@ from mfg import db
 from mfg.forms import RadTableForm
 from mfg.models import User, Group, Radcheck, Radreply, Radgroupcheck, Radgroupreply
 
-from mfg.helpers.config import ConfigManager
+from mfg.helpers.settings import GlobalSettingsManager
 from mfg.helpers.decorators import is_admin
-from mfg.helpers.utils import flash_errors
+from mfg.helpers.utils import flash_errors, render_template
 
 
 radius = Blueprint('radius', __name__)
 
 
-def radtable_helper(obj_id, RadiusModelClass, MfgModelClass, foreign_key_attr_name):
+def radtable_helper(obj_id, RadiusModelClass, MfgModelClass, foreign_key_attr_name, immutable):
     """
     helper function for views that allow to list, create, edit and delete
     radcheck, radreply, radgroupcheck, radgroupreply attributes
@@ -61,47 +62,54 @@ def radtable_helper(obj_id, RadiusModelClass, MfgModelClass, foreign_key_attr_na
             flash_errors(form)
         else:
             # ... otherwise
-            try:
-                # we assign to name the username or groupname property retrieved from this_obj
-                name = getattr(this_obj, foreign_key_attr_name)
+            if immutable:
+                message = "These records are immutable"
+            else:
+                # if it is not immutable we can proceed
+                try:
+                    # update the related object
+                    this_obj.modifiedby = current_user
+                    
+                    # we assign to name the username or groupname property retrieved from this_obj
+                    name = getattr(this_obj, foreign_key_attr_name)
 
-                # if we do not have a posted attribute_id, we are creating a new one
-                if not form.attribute_id.data:
-                    element = RadiusModelClass(op=form.op.data, attribute=form.attribute.data, value=form.value.data)
-                    setattr(element, foreign_key_attr_name, name)
-                    db.session.add(element)
+                    # if we do not have a posted attribute_id, we are creating a new one
+                    if not form.attribute_id.data:
+                        record = RadiusModelClass(op=form.op.data, attribute=form.attribute.data, value=form.value.data)
+                        setattr(record, foreign_key_attr_name, name)
+                        db.session.add(record)
 
-                    # we clear form data
-                    form.attribute_id.data = ''
-                    form.attribute.data = ''
-                    form.op.data = ''
-                    form.value.data = ''
+                        # we clear form data
+                        form.attribute_id.data = ''
+                        form.attribute.data = ''
+                        form.op.data = ''
+                        form.value.data = ''
 
-                    # then prepare a message to be flashed
-                    message = f"The attribute {element.attribute} has been successfully added"
-                else:
-                    # if we have a posted attribute_id
-                    # we edit the attribute with that id
-                    attribute_id = int(form.attribute_id.data)
-                    element = db.session.query(RadiusModelClass).get(attribute_id)
-                    setattr(element, foreign_key_attr_name, name)
-                    element.op = form.op.data
-                    element.attribute = form.attribute.data
-                    element.value = form.value.data
+                        # then prepare a message to be flashed
+                        message = f"The attribute {record.attribute} has been successfully added"
+                    else:
+                        # if we have a posted attribute_id
+                        # we edit the attribute with that id
+                        attribute_id = int(form.attribute_id.data)
+                        record = db.session.query(RadiusModelClass).get(attribute_id)
+                        setattr(record, foreign_key_attr_name, name)
+                        record.op = form.op.data
+                        record.attribute = form.attribute.data
+                        record.value = form.value.data
 
-                    # then we prepare the message to be flashed
-                    message = f"The attribute {element.attribute} has been successfully updated"
+                        # then we prepare the message to be flashed
+                        message = f"The attribute {record.attribute} has been successfully updated"
 
-                db.session.commit()
-                flash(message, 'success')
+                    db.session.commit()
+                    flash(message, 'success')
 
-            except ValueError:
-                flash("The record you selected is not valid", 'danger')
-            except SQLAlchemyError as e:
-                # TODO rollback (?)
-                # TODO replace the exception text with a custom error message
-                # TODO log the exception (to db ?, to file ?)
-                flash(str(e), 'danger')
+                except ValueError:
+                    flash("The record you selected is not valid", 'danger')
+                except SQLAlchemyError as e:
+                    # TODO rollback (?)
+                    # TODO replace the exception text with a custom error message
+                    # TODO log the exception (to db ?, to file ?)
+                    flash(str(e), 'danger')
 
     # we create a dictionary of attributes to be used in a datalist element (HTML 5)
     used_attrs = db.session.query(RadiusModelClass).with_entities(RadiusModelClass.attribute).distinct().all()
@@ -112,13 +120,14 @@ def radtable_helper(obj_id, RadiusModelClass, MfgModelClass, foreign_key_attr_na
     # the condition is specified on User.username (or Group.groupname),
     # which has to be equal to this_obj.username (or this_obj.groupname)
     condition = getattr(RadiusModelClass, foreign_key_attr_name) == getattr(this_obj, foreign_key_attr_name)
-    elements = db.session.query(RadiusModelClass).filter(condition).all()
+    records = db.session.query(RadiusModelClass).filter(condition).all()
 
-    return render_template('radius/radtable.html', conf=ConfigManager, current_user=current_user, obj=this_obj,
-                           form=form, elements=elements, table=RadiusModelClass.__tablename__, attrs=attrs, ops=ops)
+    return render_template('radius/radtable.html', conf=GlobalSettingsManager, current_user=current_user, obj=this_obj,
+                           form=form, records=records, table=RadiusModelClass.__tablename__, attrs=attrs, ops=ops,
+                           immutable=immutable)
 
 
-# ~ def delete_from_radtabled(RadiusModelClass, foreign_key_attr_name)
+# ~ TODO def delete_from_radtabled(RadiusModelClass, foreign_key_attr_name):
 
 @radius.route('/admin/radius/radcheck/manage/<int:uid>', methods=['GET', 'POST'])
 @is_admin
@@ -126,7 +135,7 @@ def radcheck(uid):
     """
     this view uses the radtable_helper function to list, create, edit or delete radcheck attributes
     """
-    return radtable_helper(uid, Radcheck, User, 'username')
+    return radtable_helper(uid, Radcheck, User, 'username', False)
 
 
 @radius.route('/admin/radius/radreply/manage/<int:uid>', methods=['GET', 'POST'])
@@ -135,7 +144,7 @@ def radreply(uid):
     """
     this view uses the radtable_helper function to list, create, edit or delete radreply attributes
     """
-    return radtable_helper(uid, Radreply, User, 'username')
+    return radtable_helper(uid, Radreply, User, 'username', False)
 
 
 @radius.route('/admin/radius/radgroupcheck/manage/<int:gid>', methods=['GET', 'POST'])
@@ -144,7 +153,15 @@ def radgroupcheck(gid):
     """
     this view uses the radtable_helper function to list, create, edit or delete radgroupcheck attributes
     """
-    return radtable_helper(gid, Radgroupcheck, Group, 'groupname')
+    this_group = db.session.query(Group).get(gid)
+    if not this_group:
+        # TODO log
+        abort(404)
+
+    groupname = str(this_group.groupname)
+    immutable = bool(this_group.groupname == current_app.config['MFG_ACCOUNT_DISABLED_GROUPNAME'] or
+                     this_group.groupname == current_app.config['MFG_PASSWORD_EXPIRED_GROUPNAME'])
+    return radtable_helper(gid, Radgroupcheck, Group, 'groupname', immutable)
 
 
 @radius.route('/admin/radius/radgroupreply/manage/<int:gid>', methods=['GET', 'POST'])
@@ -153,4 +170,4 @@ def radgroupreply(gid):
     """
     this view uses the radtable_helper function to list, create, edit or delete radgroupreply attributes
     """
-    return radtable_helper(gid, Radgroupreply, Group, 'groupname')
+    return radtable_helper(gid, Radgroupreply, Group, 'groupname', False)

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+    <title>{{ conf.get('application.name') }} :: reset your password</title>
+    <style>a:hover {text-decoration:underline !important;}</style>
+  </head>
+  <body style="@import url('https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700');font-family:'Open Sans',sans-serif;margin:0;background-color:#f5f5f5">
+    <table
+      style="border:0;width:100%;background-color:#f5f5f5;">
+      <tr>
+        <td>
+          <table style="background-color:#f5f5f5;max-width:670px;margin:0 auto;width:100%;border:0;text-align:center">
+            <tr>
+              <td style="height:20px">&nbsp;</td>
+            </tr>
+            <tr>
+              <td>
+                <h3 style="color:#4f4f4f;text-align:center">{{ conf.get('application.name') }}</h3>
+              </td>
+            </tr>
+            <tr>
+              <td style="height:20px">&nbsp;</td>
+            </tr>
+            <tr>
+              <td>
+                <table
+                  style="margin:0 auto;width:95%;max-width:670px;background:#ffffff;border:0;border-radius:3px;text-align:center;-webkit-box-shadow:0 6px 18px 0 rgba(0,0,0,.06);-moz-box-shadow:0 6px 18px 0 rgba(0,0,0,.06);box-shadow:0 6px 18px 0 rgba(0,0,0,.06)">
+                  <tr>
+                    <td style="height:40px">&nbsp;</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 35px">
+                      <h1 style="text-align:center;color:#1e1e2d;margin:0;font-size:32px">
+                        Hello {{ user.firstname }}!
+                      </h1>
+                      <h2 style="text-align:center;color:#1e1e2d;margin:0;font-size:22px">
+                        We have received a password reset request.
+                      </h2>
+                      <span
+                        style="display:inline-block;vertical-align:middle;margin:29px 0 26px;border-bottom:1px solid #cecece;width:100px"></span>
+                      <p style="text-align:justify;color:#455056;font-size:15px;line-height:24px;margin:0">
+                        For this reason, we have generated a unique password reset link.
+                        It can be used to reset the password associated with your account having username <strong>{{ user.username }}</strong>.
+                        You just need to click the button below and follow the instructions.
+                      </p>
+                      <a href="{{ token.reset_or_activate_url() }}"
+                        style="text-align:center;background:#198754;text-decoration:none !important;font-weight:700;margin:35px auto;color:#ffffff;text-transform:uppercase;font-size:14px;padding:10px 24px;display:inline-block;border-radius:5px">
+                        Reset Password</a>
+                        
+                      <p style="text-align:center;color:#455056;font-size:10px;line-height:12px">
+                        If you have not initiated this request, simply <strong>ignore this email</strong>.<br>
+                        Also, keep in mind that, this is an automatically generated email, please <strong>do not reply</strong>!
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="height:40px">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            <tr>
+              <td style="height:20px">&nbsp;</td>
+            </tr>
+            <tr>
+              <td>
+                <p style="text-align:center;font-size:14px;color:#4f4f4f;line-height:18px;margin:0 0 0">&copy; <strong>{{ conf.get('application.name') }}</strong></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="height:80px">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+

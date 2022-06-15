@@ -1,0 +1,45 @@
+<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+  <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="{{ url_for('main.index') }}">{{ conf.get('application.name') }}</a>
+  <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  
+  {% from "macros.html" import render_nav_field2, render_nav_button2 %}
+  
+  <ul class="nav me-auto">
+  {% if current_user.is_authenticated %}
+    {% if current_user.is_admin_or_contact_person() %}
+      {% if request.path.startswith("/user") %}
+        {{ render_nav_field2("Dashboard", url_for('main.regular_dashboard')) }}
+      {% else %}
+        {{ render_nav_field2("Dashboard", url_for('main.privileged_dashboard')) }}
+      {% endif %}
+
+      {% if request.path.startswith("/admin") %}
+        {{ render_nav_field2("Users", url_for('user.list')) }}
+        {{ render_nav_field2("Contact Persons", url_for('contact_person.list')) }}
+        {% if current_user.is_admin %}
+          {{ render_nav_field2("Organizations", url_for('organization.list')) }}
+        {% endif %}
+      {% endif %}
+    {% else %}
+      {{ render_nav_field2("Dashboard", url_for('main.regular_dashboard')) }}
+    {% endif %}
+  {% endif %}
+  </ul>
+
+  <ul class="nav">
+  {% if current_user.is_authenticated %}
+    {% if current_user.is_admin_or_contact_person() %}
+      {% if request.path.startswith("/admin") %}
+        {{ render_nav_field2("Regular user view", url_for('main.regular_dashboard')) }}
+      {% elif request.path.startswith("/user") %}
+        {{ render_nav_field2("Admin view", url_for('main.privileged_dashboard')) }}
+      {% endif %}
+    {% endif %}
+    {{ render_nav_field2("Log out", url_for('auth.logout')) }}
+  {% else %}
+    {{ render_nav_field2("Log in", url_for('auth.login')) }}
+  {% endif %}
+  </ul>
+</header>
