@@ -78,24 +78,39 @@ get_password() {
 
 
 APP_SHORTNAME="MFG"
-
-# we check that the script is running as root
-if [ "$EUID" -ne 0 ]; then
-  echo "[!] Please run this script as root"
-  exit 1
-fi
+CALLING_USER="$(whoami)"
 
 # we get the host operating system
+printf "[+] I am checking if ${APP_SHORTNAME} can be installed on this system... "
 OS=$(grep '^ID=' /etc/*-release | cut -d'=' -f2)
 case $OS in
   "ubuntu"|"debian")
+    echo "OK"
     echo "[+] Good! ${APP_SHORTNAME} can be installed on ${OS}."
-    if ! apt -y update; then echo "[!] Error when updating package information."; exit 1; fi
-    apt -y install git python3-dev python3-virtualenv build-essential default-libmysqlclient-dev
+    
+    printf "[+] I am updating package information... "
+    if ! sudo apt -y update &> /dev/null; then
+      echo "KO"
+      echo "[!] Error when updating package information."
+      return 1
+    else
+      echo "OK"
+    fi
+    
+    printf "[+] I am installing required packages... "
+    if ! sudo apt -y install git python3-dev python3-virtualenv build-essential default-libmysqlclient-dev &> /dev/null; then
+      echo "KO"
+      echo "[!] Error when downloading/installing required packages."
+      return 1
+    else
+      echo "OK"
+    fi
+
     ;;
   *)
-    echo "[!] We are sorry. ${APP_SHORTNAME} installation procedure has not been tested on ${OS}."
-    exit 1
+    echo "KO"
+    echo "[!] I am sorry. ${APP_SHORTNAME} installation procedure has not been tested on ${OS}."
+    return 1
     ;;
 esac
 
@@ -106,13 +121,21 @@ if ([ -h "${SCRIPT_PATH}" ]); then
   while([ -h "${SCRIPT_PATH}" ]); do cd "$(dirname "$SCRIPT_PATH")" || continue;
   SCRIPT_PATH=$(readlink "${SCRIPT_PATH}"); done
 fi
-cd "$(dirname "${SCRIPT_PATH}")" || exit 0
+cd "$(dirname "${SCRIPT_PATH}")" || return 0
 SCRIPT_PATH=$(pwd);
 popd > /dev/null
 
 # we get the absolute path of the installation directory
 INSTALLATION_DIR=$(dirname "$SCRIPT_PATH")
-echo "[+] We are going to install ${APP_SHORTNAME} in ${INSTALLATION_DIR}..."
+
+if ! test -w "${INSTALLATION_DIR}"; then
+  echo "[!] In order to install ${APP_SHORTNAME}, I need writing permission for user ${CALLING_USER} on directory ${INSTALLATION_DIR}"
+  return 1
+fi
+
+cd "${INSTALLATION_DIR}" || return 0
+
+echo "[+] I am going to install ${APP_SHORTNAME} in ${INSTALLATION_DIR}..."
 
 # we check if an old configuration is present
 CONFIG_FILE="${INSTALLATION_DIR}/config.json"
@@ -121,23 +144,38 @@ if [ -f "$CONFIG_FILE" ]; then
   printf "[?] Are you sure you want to continue? [Y/n] "
   read -r CONTINUE
   case $CONTINUE in
-    N|n) echo "[+] Installation aborted"; exit 0 ;;
+    N|n) echo "[+] Installation aborted"; return 0 ;;
   esac
 
   rm -f "${CONFIG_FILE}"
 fi
 
 # we create a new python3 virtual environment
-echo "[+] Creating python3 virtual environment..."
+printf "[+] Creating python3 virtual environment... "
 rm -rf "${INSTALLATION_DIR}/env"
 mkdir "${INSTALLATION_DIR}/env"
-chmod 640 "${INSTALLATION_DIR}/env"
-virtualenv --python=$(command -v python3) --quiet "${INSTALLATION_DIR}/env"
+chmod 755 "${INSTALLATION_DIR}/env"
+if ! virtualenv --python=$(command -v python3) --quiet "${INSTALLATION_DIR}/env" &> /dev/null; then
+  echo "KO"
+  echo "[!] Error when creating python3 virtual environment."
+  return 1
+else
+  echo "OK"
+fi
 
 # we install python3 dependencies
-echo "[+] Installing python3 dependencies..."
+REQUIREMENTS_FILE="${INSTALLATION_DIR}/requirements.txt"
+printf "[+] Installing python3 dependencies... "
 . "${INSTALLATION_DIR}/env/bin/activate"
-"${INSTALLATION_DIR}/env/bin/pip3" install -r requirements.txt
+if ! "${INSTALLATION_DIR}/env/bin/pip3" install -r "${REQUIREMENTS_FILE}" &> /dev/null; then
+  echo "KO"
+  echo "[!] Error when installing required python3 dependencies."
+  return 1
+else
+  echo "OK"
+fi
+
+echo; echo "[+] We can now start configuring MariaDB/MySQL connection parameters..."; echo
 
 # get DB information
 while true; do
@@ -172,7 +210,7 @@ while true; do
     case $CONTINUE in
       N|n) break
     esac
-    apt update && apt -y install mariadb-client
+    sudo apt -y install mariadb-client
   fi
 
   MYSQL_CLIENT_FILENAME="$(mktemp -qu).conf"
@@ -192,7 +230,7 @@ EOF
   fi
 
   rm -rf "${MYSQL_CLIENT_FILENAME}"
-  echo "[!] Cannot connect to database."
+  echo "[!] I cannot connect to database."
   printf "[?] Do you want to retype in all the configurations? [Y/n] "
   read -r CONTINUE
   case $CONTINUE in
@@ -203,6 +241,8 @@ done
 
 # gen. key
 K=$(python3 -c 'from random import SystemRandom; from string import ascii_letters,digits; print("".join(SystemRandom().choice(ascii_letters + digits) for _ in range(64)))')
+
+echo; echo "[+] We can now start configuring SMTP connection parameters"; echo
 
 # get SMTP information
 MAIL_HOST=""
@@ -257,19 +297,26 @@ if [ ! -L "${LISTS_DIR}/dict.txt" ] ; then
   ln -s "${LISTS_DIR}/dict-english.txt" "${LISTS_DIR}/dict.txt"
 fi
 
-MFG_USER="mfg"
+#~ TODO create a switching production/development installation system
+#~ MFG_USER="mfg"
 
-if ! id -u "$MFG_USER" &> /dev/null; then
-  echo "[!] I am going to create the system user ${MFG_USER}."
-  printf "[?] Do you want to continue? [Y/n] "
-  read -r CONTINUE
-  case $CONTINUE in
-    Y|y)
-      useradd --home-dir "${INSTALLATION_DIR}" --shell "$(command -v nologin)" --system "${MFG_USER}"
-    ;;
-  esac
-fi
+#~ if ! id -u "$MFG_USER" &> /dev/null; then
+  #~ echo "[!] I am going to create the system user ${MFG_USER}."
+  #~ printf "[?] Do you want to continue? [Y/n] "
+  #~ read -r CONTINUE
+  #~ case $CONTINUE in
+    #~ Y|y)
+      #~ useradd --home-dir "${INSTALLATION_DIR}" --shell "$(command -v nologin)" --system "${MFG_USER}"
+    #~ ;;
+  #~ esac
+#~ fi
 
-chown -R "${MFG_USER}:${MFG_USER}" "${INSTALLATION_DIR}"
+sudo chown -R "${CALLING_USER}:${CALLING_USER}" "${INSTALLATION_DIR}"
 
-exit 0
+cd "${INSTALLATION_DIR}/.." || return 1
+
+echo; echo "[!] Congratulations, ${APP_SHORTNAME} has been installed."
+
+deactivate
+
+return 0
