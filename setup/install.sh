@@ -31,7 +31,7 @@ get_string() {
   while true; do
     LABEL="$1"
     if [ ! -z "$2" ]; then
-      LABEL="${LABEL} [$2]: "
+      LABEL="${LABEL} [$2]"
     fi
   
     read -r -p "[>] $LABEL: " S
@@ -256,5 +256,20 @@ LISTS_DIR="${INSTALLATION_DIR}/resources/lists"
 if [ ! -L "${LISTS_DIR}/dict.txt" ] ; then
   ln -s "${LISTS_DIR}/dict-english.txt" "${LISTS_DIR}/dict.txt"
 fi
+
+MFG_USER="mfg"
+
+if ! id -u "$MFG_USER" &> /dev/null; then
+  echo "[!] I am going to create the system user ${MFG_USER}."
+  printf "[?] Do you want to continue? [Y/n] "
+  read -r CONTINUE
+  case $CONTINUE in
+    Y|y)
+      useradd --home-dir "${INSTALLATION_DIR}" --shell "$(command -v nologin)" --system "${MFG_USER}"
+    ;;
+  esac
+fi
+
+chown -R "${MFG_USER}:${MFG_USER}" "${INSTALLATION_DIR}"
 
 exit 0
