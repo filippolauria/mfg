@@ -4,6 +4,7 @@
 # Input helpers
 #
 
+
 # usage: get_port "text" "default"
 get_port() {
   while true; do
@@ -314,6 +315,24 @@ fi
 sudo chown -R "${CALLING_USER}:${CALLING_USER}" "${INSTALLATION_DIR}"
 
 cd "${INSTALLATION_DIR}/.." || return 1
+
+# setting housekeeping jobs in the system crontab
+SYS_CRON_LINE="3 0 * * * ${CALLING_USER} '${INSTALLATION_DIR}/env/bin/python3' '${INSTALLATION_DIR}/scripts/housekeeping.py'"
+
+if ! grep -qE "${INSTALLATION_DIR}/scripts/housekeeping.py" /etc/crontab; then
+cat <<EOF
+
+[!] ${APP_SHORTNAME} needs to execute autmatic periodic housekeeping tasks.
+[!] For this reason the following line should be added at the end of the system-wide crontab file:
+    ${SYS_CRON_LINE}
+EOF
+  printf "[?] Do you want me to do that? [Y/n] "
+  read -r CONTINUE
+  case $CONTINUE in
+    N|n) ;;
+    *) echo "${SYS_CRON_LINE}" | sudo tee --append /etc/crontab > /dev/null ;;
+  esac
+fi
 
 echo; echo "[!] Congratulations, ${APP_SHORTNAME} has been installed."
 
