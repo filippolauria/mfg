@@ -1,4 +1,4 @@
-{% from "macros.html" import render_aside_field2 %}
+{% from "structural/macros.html" import render_sidebar_button %}
 
   <div class="position-sticky pt-3">
   {% if request.path.startswith("/admin") %}
@@ -8,9 +8,9 @@
     </h6>
     
     <ul class="nav flex-column">
-      {{ render_aside_field2('Create an user', url_for('user.create')) }}
-      {{ render_aside_field2('Manage users', url_for('user.list')) }}
-      {{ render_aside_field2('Search by username', url_for('user.search')) }}
+      {{ render_sidebar_button('Create an user', url_for('user.create')) }}
+      {{ render_sidebar_button('Manage users', url_for('user.list')) }}
+      {{ render_sidebar_button('Search by username', url_for('user.search')) }}
     </ul>
     {% endif %}
     
@@ -19,37 +19,37 @@
       <span>Groups</span>
     </h6>
     <ul class="nav flex-column">
-      {{ render_aside_field2('Manage groups', url_for('group.manage')) }}
+      {{ render_sidebar_button('Manage groups', url_for('group.manage')) }}
     </ul>
     
     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
       <span>Organizations</span>
     </h6>
     <ul class="nav flex-column">
-      {{ render_aside_field2('Create an organization', url_for('organization.create')) }}
-      {{ render_aside_field2('Manage organizations', url_for('organization.list')) }}
+      {{ render_sidebar_button('Create an organization', url_for('organization.create')) }}
+      {{ render_sidebar_button('Manage organizations', url_for('organization.list')) }}
     </ul>
     
     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
       <span>Contact Persons</span>
     </h6>
     <ul class="nav flex-column">
-      {{ render_aside_field2('Manage contact persons', url_for('contact_person.list')) }}
+      {{ render_sidebar_button('Manage contact persons', url_for('contact_person.list')) }}
     </ul>
     
     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
       <span>Domain names</span>
     </h6>
     <ul class="nav flex-column">
-      {{ render_aside_field2('Create a domain name', url_for('domain.create')) }}
-      {{ render_aside_field2('Manage domain names', url_for('domain.list')) }}
+      {{ render_sidebar_button('Create a domain name', url_for('domain.create')) }}
+      {{ render_sidebar_button('Manage domain names', url_for('domain.list')) }}
     </ul>
 
     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
       <span>General</span>
     </h6>
     <ul class="nav flex-column">
-      {{ render_aside_field2('Global settings', url_for('settings._global')) }}
+      {{ render_sidebar_button('Global settings', url_for('settings._global')) }}
       <li class="nav-item"><a class="nav-link" href="#"><span data-feather="file-text"></span>Events log</a></li>
     </ul>
     {% endif %}
@@ -78,7 +78,7 @@
       </li>
       {% else %}
         {% set label = organizations.0.shortname + " Settings" %}
-        {{ render_aside_field2(label, url_for('settings._organization', oid=organizations.0.id)) }}
+        {{ render_sidebar_button(label, url_for('settings._organization', oid=organizations.0.id)) }}
       {% endif %}
     </ul>
     
@@ -88,8 +88,8 @@
     </h6>
     
     <ul class="nav flex-column">
-      {{ render_aside_field2('Details', url_for('user.user_details')) }}
-      {{ render_aside_field2('Change Password', url_for('user.change_password')) }}
+      {{ render_sidebar_button('Details', url_for('user.user_details')) }}
+      {{ render_sidebar_button('Change Password', url_for('user.change_password')) }}
     </ul>
   {% endif %}
   </div>

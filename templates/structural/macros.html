@@ -19,6 +19,14 @@
 </div>
 {% endmacro %}
 
+{% macro render_navbar_button(label, url) %}
+<li><a href="{{ url }}" class="nav-link px-2 text-white">{{ label }}</a></li>
+{% endmacro %}
+
+{% macro render_sidebar_button(label, url) %}
+<li class="nav-item"><a class="nav-link" href="{{ url }}">{{ label }}</a></li>
+{% endmacro %}
+
 {% macro shortlist_datatable(table_selector) %}
 <script>
   $(document).ready(function() {

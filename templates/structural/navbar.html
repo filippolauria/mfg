@@ -4,26 +4,26 @@
     <span class="navbar-toggler-icon"></span>
   </button>
   
-  {% from "macros.html" import render_nav_field2, render_nav_button2 %}
+  {% from "structural/macros.html" import render_navbar_button %}
   
   <ul class="nav me-auto">
   {% if current_user.is_authenticated %}
     {% if current_user.is_admin_or_contact_person() %}
       {% if request.path.startswith("/user") %}
-        {{ render_nav_field2("Dashboard", url_for('main.regular_dashboard')) }}
+        {{ render_navbar_button("Dashboard", url_for('main.regular_dashboard')) }}
       {% else %}
-        {{ render_nav_field2("Dashboard", url_for('main.privileged_dashboard')) }}
+        {{ render_navbar_button("Dashboard", url_for('main.privileged_dashboard')) }}
       {% endif %}
 
       {% if request.path.startswith("/admin") %}
-        {{ render_nav_field2("Users", url_for('user.list')) }}
-        {{ render_nav_field2("Contact Persons", url_for('contact_person.list')) }}
+        {{ render_navbar_button("Users", url_for('user.list')) }}
+        {{ render_navbar_button("Contact Persons", url_for('contact_person.list')) }}
         {% if current_user.is_admin %}
-          {{ render_nav_field2("Organizations", url_for('organization.list')) }}
+          {{ render_navbar_button("Organizations", url_for('organization.list')) }}
         {% endif %}
       {% endif %}
     {% else %}
-      {{ render_nav_field2("Dashboard", url_for('main.regular_dashboard')) }}
+      {{ render_navbar_button("Dashboard", url_for('main.regular_dashboard')) }}
     {% endif %}
   {% endif %}
   </ul>
@@ -32,14 +32,14 @@
   {% if current_user.is_authenticated %}
     {% if current_user.is_admin_or_contact_person() %}
       {% if request.path.startswith("/admin") %}
-        {{ render_nav_field2("Regular user view", url_for('main.regular_dashboard')) }}
+        {{ render_navbar_button("Regular user view", url_for('main.regular_dashboard')) }}
       {% elif request.path.startswith("/user") %}
-        {{ render_nav_field2("Admin view", url_for('main.privileged_dashboard')) }}
+        {{ render_navbar_button("Admin view", url_for('main.privileged_dashboard')) }}
       {% endif %}
     {% endif %}
-    {{ render_nav_field2("Log out", url_for('auth.logout')) }}
+    {{ render_navbar_button("Log out", url_for('auth.logout')) }}
   {% else %}
-    {{ render_nav_field2("Log in", url_for('auth.login')) }}
+    {{ render_navbar_button("Log in", url_for('auth.login')) }}
   {% endif %}
   </ul>
 </header>

@@ -67,7 +67,7 @@ def signup_finalization(token):
             db.session.delete(this_token)
             db.session.commit()
             # TODO log
-            return render_template('signup_finalization.html', conf=GlobalSettingsManager)
+            return render_template('auth/signup_finalization.html', conf=GlobalSettingsManager)
 
         # if the auto signup feature is globally enabled,
         # we try to deduce the organization(s) starting from the email associated with the SignupToken
@@ -87,7 +87,7 @@ def signup_finalization(token):
         if request.method == 'POST':
             if not form.validate():
                 flash_errors(form)
-                return render_template('signup_finalization.html', conf=GlobalSettingsManager, form=form)
+                return render_template('auth/signup_finalization.html', conf=GlobalSettingsManager, form=form)
 
             # we have a valid submitted form
             if one_organization:
@@ -108,7 +108,7 @@ def signup_finalization(token):
             # if auto signup feature is disabled for this organization, we don't procede further
             if organization_self_signup_method == 0:
                 # TODO log
-                return render_template('signup_finalization.html', conf=GlobalSettingsManager)
+                return render_template('auth/signup_finalization.html', conf=GlobalSettingsManager)
 
             # we start creating firstname, lastname and hash
             firstname = form.firstname.data.title()
@@ -176,7 +176,7 @@ def signup_finalization(token):
         # TODO log the exception (to db ?, to file ?)
         flash(str(e), 'danger')
 
-    return render_template('signup_finalization.html', conf=GlobalSettingsManager, form=form)
+    return render_template('auth/signup_finalization.html', conf=GlobalSettingsManager, form=form)
 
 
 @auth.route('/signup', methods=['GET', 'POST'])

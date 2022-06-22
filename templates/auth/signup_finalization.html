@@ -1,0 +1,60 @@
+{% extends "structural/centered_base.html" %}
+
+{% block title %}Signup Finalization{% endblock %}
+
+{% block extraheader %}
+{% include "structural/header/icons.html" %}
+{% if form %}<script src="{{ url_for('static', filename='/js/common.js') }}"></script>{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<main class="container-fluid">
+  <div class="row my-3">
+    <div class="col-10 offset-1">
+
+{% if form %}
+  {% from "structural/macros.html" import render_inputfield %}
+
+      <form method="POST" action="{{ request.path }}">
+        {{ form.csrf_token }}
+        
+        <div class="col-md-6 offset-md-3">
+          <div class="row">
+            <h5 class="pb-3 border-bottom"><i class="bi bi-tools me-2"></i>User details</h5>
+
+            <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.firstname) }}</div>
+            <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.lastname) }}</div>
+
+            <div class="col-12 col-md-6 my-3">
+              <label for="{{ form.password1.id }}" class="form-label">{{ form.password1.label.text }}</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                {{ form.password1 }}
+                <button id="btn-random-password" type="button" class="input-group-text" title="Generate random password">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+                <button id="btn-show-hide-password" type="button" class="input-group-text" title="Show/Hide">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+            </div>
+            <div class="col-12 col-md-6 my-3">{{ render_inputfield(form.password2, 'lock-fill') }}</div>
+          </div>
+        </div>
+        
+        <div class="col-md-6 offset-md-3 d-grid my-3">
+          <button type="submit" class="d-grid btn btn-primary">Signup</button>
+        </div>
+        
+      </form>
+{% endif %}
+    </div>
+  </div>
+  
+  {% include "structural/toast.html" %}
+  
+</main>
+
+
+{% endblock %}
