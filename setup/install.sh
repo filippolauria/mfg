@@ -77,7 +77,15 @@ get_password() {
 
 }
 
+# check if script has been sourced
+(return 0 2>/dev/null) && SOURCED=1 || SOURCED=0
 
+if [ $SOURCED == 0 ]; then
+  echo "[!] You must execute me this way -> source ${0}"
+  exit 1
+fi
+
+# check if script is run within a virtualenv 
 if [ "$VIRTUAL_ENV" ]; then
   printf "[!] I am running from a virtualenv context. Exiting... "
   if deactivate; then
