@@ -78,6 +78,16 @@ get_password() {
 }
 
 
+if [ "$VIRTUAL_ENV" ]; then
+  printf "[!] I am running from a virtualenv context. Exiting... "
+  if deactivate; then
+    echo "OK"
+  else
+    echo "KO" && return 1
+  fi
+fi
+
+
 APP_SHORTNAME="MFG"
 CALLING_USER="$(whoami)"
 
