@@ -41,7 +41,7 @@ from mfg.models import User, Organization, Domain, Group, Radcheck, Radgroupchec
 from mfg.helpers.settings import GlobalSettingsManager, OrganizationSettingsManager
 from mfg.helpers.decorators import is_authenticated, is_admin_or_contact_person
 from mfg.helpers.hashes import make_hash
-from mfg.helpers.utils import flash_errors, render_template
+from mfg.helpers.utils import flash_errors, render_template, random_password as generate_random_password
 
 
 main = Blueprint('main', __name__)
@@ -221,48 +221,9 @@ def random_password():
     an endpoint for creating a strong password starting from a dictionary file
     """
 
-    # we get the full path of the dictionary file
-    dict_path = os.path.join(current_app.root_path, "resources/lists/dict.txt")
+    p = generate_random_password()
 
-    # if it does not exist, we abort
-    if not os.path.exists(dict_path):
+    if not p:
         abort(500)
 
-    word1 = ""
-    word2 = ""
-    with open(dict_path, 'r') as fd:
-        # we get two random words from the dictionary file
-        words = [s.rstrip('\n') for s in fd.readlines()]
-
-        # 1st word
-        while True:
-            word1 = random.choice(words)
-            if word1 != "":
-                break
-
-        # 2nd word
-        while True:
-            word2 = random.choice(words)
-            if word1 != word2 and word2 != "":
-                break
-
-    if word1 == "" or word2 == "":
-        abort(500)
-
-    # pseudo-randomly transform word case
-    transformed1 = ""
-    for w in word1:
-        transformed1 += w.lower() if random.randint(0, 1) else w.upper()
-
-    transformed2 = ""
-    for w in word2:
-        transformed2 += w.lower() if random.randint(0, 1) else w.upper()
-
-    # pseudo-randomly select a symbol
-    symbols = "!#$%,-.:;@^_"
-    symbol = random.choice(symbols)
-
-    # pseudo-random number
-    number = random.randint(0, 999)
-
-    return f"{transformed1}{symbol}{transformed2}{number}"
+    return p

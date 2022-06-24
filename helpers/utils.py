@@ -27,10 +27,12 @@
 #
 
 import htmlmin
+import os
+import random
 import unidecode
 from random import SystemRandom
 from string import ascii_lowercase
-from flask import flash, render_template as flask_render_template
+from flask import flash, current_app, render_template as flask_render_template
 
 
 def render_template(template_path, **kwargs):
@@ -60,3 +62,51 @@ def flash_errors(form):
         for error in errors:
             label = getattr(form, field).label.text
             flash(f'"{label}": {error}', 'danger')
+
+
+def random_password():
+    # we get the full path of the dictionary file
+    dict_path = os.path.join(current_app.root_path, "resources", "lists", "dict.txt")
+
+    # if it does not exist, we abort
+    if not os.path.exists(dict_path):
+        return False
+
+    word1 = ""
+    word2 = ""
+    with open(dict_path, 'r') as fd:
+        # we get two random words from the dictionary file
+        words = [s.rstrip('\n') for s in fd.readlines()]
+
+        # 1st word
+        while True:
+            word1 = random.choice(words)
+            if word1 != "":
+                break
+
+        # 2nd word
+        while True:
+            word2 = random.choice(words)
+            if word1 != word2 and word2 != "":
+                break
+
+    if word1 == "" or word2 == "":
+        return False
+
+    # pseudo-randomly transform word case
+    transformed1 = ""
+    for w in word1:
+        transformed1 += w.lower() if random.randint(0, 1) else w.upper()
+
+    transformed2 = ""
+    for w in word2:
+        transformed2 += w.lower() if random.randint(0, 1) else w.upper()
+
+    # pseudo-randomly select a symbol
+    symbols = "!#$%,-.:;@^_"
+    symbol = random.choice(symbols)
+
+    # pseudo-random number
+    number = random.randint(0, 999)
+
+    return f"{transformed1}{symbol}{transformed2}{number}"
