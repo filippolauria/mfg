@@ -29,12 +29,10 @@
 from wtforms.widgets.core import Input
 
 
-class DateInput(Input):
+class DateLikeInput(Input):
     """
-    Class for rendering an input with type "date" (HTML 5).
+    Base class for "date-like" widgets
     """
-    input_type = 'date'
-
     def __init__(self, step=None, min=None, max=None):
         self.step = step
         self.min = min
@@ -47,4 +45,18 @@ class DateInput(Input):
             kwargs.setdefault('min', self.min)
         if self.max is not None:
             kwargs.setdefault('max', self.max)
-        return super(DateInput, self).__call__(field, **kwargs)
+        return super(DateLikeInput, self).__call__(field, **kwargs)
+
+
+class DateInput(DateLikeInput):
+    """
+    Class for rendering an input with type "date" (HTML 5).
+    """
+    input_type = 'date'
+
+
+class DateTimeLocalInput(DateLikeInput):
+    """
+    Class for rendering an input with type "datetime-local" (HTML 5).
+    """
+    input_type = 'datetime-local'
