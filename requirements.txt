@@ -27,6 +27,6 @@ SQLAlchemy-Utils
 typing-extensions
 Unidecode
 Werkzeug
-WTForms==3.0.*
+WTForms==3.1.*
 WTForms-SQLAlchemy
 zipp
