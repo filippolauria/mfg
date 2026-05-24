@@ -9,6 +9,7 @@ Flask-Login
 Flask-SQLAlchemy
 Flask-WTF
 greenlet
+legacy-cgi
 htmlmin
 idna
 importlib-metadata
@@ -18,7 +19,6 @@ Jinja2
 MarkupSafe
 mccabe
 mysqlclient
-pkg-resources
 pycodestyle
 pyflakes
 six
