@@ -117,7 +117,7 @@ case $OS in
     fi
     
     printf "[+] I am installing required packages... "
-    if ! sudo apt -y install git python3-dev python3-virtualenv build-essential default-libmysqlclient-dev &> /dev/null; then
+    if ! sudo apt -y install git python3-dev python3-virtualenv build-essential default-libmysqlclient-dev pkg-config &> /dev/null; then
       echo "KO"
       echo "[!] Error when downloading/installing required packages."
       return 1
